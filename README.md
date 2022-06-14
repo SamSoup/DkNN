@@ -14,7 +14,8 @@ We use the dataset from Antigoni Maria Founta et al. [Large scale crowdsourcing 
 Antigoni-Maria Founta; Constantinos Djouvas; Despoina Chatzakou; Ilias Leontiadis; Jeremy Blackburn; Gianluca Stringhini; Athena Vakali; Michael Sirivianos; Nicolas Kourtellis, 2018, "Large Scale Crowdsourcing and Characterization of Twitter Abusive Behavior", doi:10.5072/FK2/ZDTEMN, Root, V1, UNF:6:Gis9lCfXBUc7fdE0YoydlA== 
 ```
 
-The dataset covers 80 thousand tweets categorized under hateful, abusive, normal, or spam. We do not use any additional metadata besides the crowdsourced majority vote label nor retweet information.
+The dataset covers 80 thousand tweets categorized under hateful, abusive, normal, or spam. We do not use any additional metadata besides the crowdsourced majority vote label nor retweet information. We binarize the dataset into tweets of hate vs non-hate (abusive + normal + spam), see `preprocess.py`.
+
 
 # Baseline
 
