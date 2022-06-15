@@ -15,6 +15,7 @@ from data import train_val_test_split, read_data
 from args import DataArguments, ModelArguments
 from transformers.trainer_utils import get_last_checkpoint
 from datasets import load_dataset, load_metric, Dataset
+import numpy as np
 import os
 import torch
 import logging
@@ -304,7 +305,6 @@ def main():
         )
         metrics["eval_samples"] = min(max_eval_samples, len(eval_data))
         trainer.log_metrics("eval", metrics)
-        trainer.save_metrics("eval", combined if task is not None and "mnli" in task else metrics)
 
     # Test set Prediction
     if training_args.do_predict:
@@ -314,10 +314,10 @@ def main():
         predictions = trainer.predict(test_data, metric_key_prefix="predict").predictions
         predictions = np.argmax(predictions, axis=1)
 
-        output_predict_file = os.path.join(training_args.output_dir, f"predict_results_{task}.txt")
+        output_predict_file = os.path.join(training_args.output_dir, f"predict_results.txt")
         if trainer.is_world_process_zero():
             with open(output_predict_file, "w") as writer:
-                logger.info(f"***** Predict results {task} *****")
+                logger.info(f"***** Predict results *****")
                 writer.write("index\tprediction\n")
                 for index, item in enumerate(predictions):
                     item = label_list[item]
