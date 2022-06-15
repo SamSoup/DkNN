@@ -4,7 +4,7 @@ preprocess:
 run:
 	python3 main.py \
 	--model_name_or_path vinai/bertweet-large \
-	--train_file ./data/train.csv \
+	--train_file ./data/train_small.csv \
 	--seed 42 \
 	--shuffle_seed 42 \
 	--output_dir ./output/bert \
