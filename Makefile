@@ -13,3 +13,5 @@ run:
 	--do_train \
 	--do_eval \
 	--do_predict \
+	--pad_to_max_length \
+	--input_key Tweet \

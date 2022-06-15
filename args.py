@@ -16,6 +16,13 @@ class DataArguments:
             "than this will be truncated, sequences shorter will be padded."
         },
     )
+    pad_to_max_length: bool = field(
+        default=True,
+        metadata={
+            "help": "Whether to pad all samples to `max_seq_length`. "
+            "If False, will pad the samples dynamically when batching to the maximum length in the batch."
+        },
+    )
     max_train_samples: Optional[int] = field(
         default=None,
         metadata={
@@ -72,9 +79,17 @@ class DataArguments:
             "help": "The amount of data to use for test set, only used if do_train_val_test_split is True."
         }
     )
+    overwrite_cache: bool = field(
+        default=False, metadata={"help": "Overwrite the cached preprocessed datasets or not."}
+    )
     shuffle_seed : Optional[int] = field (
         default = 42, metadata = {
             "help": "The random seed for shuffling rows for train-val-test split and other data related operations."
+        }
+    )
+    input_key: str = field (
+        default = "input", metadata = {
+            "help": "The name of the column that contains the input sequences to the model."
         }
     )
 

@@ -26,11 +26,11 @@ BART
 # Installation
 
 ```
-conda create --name sam python=3.9
-conda activate sam
+conda create --name DkNN python=3.9
+conda activate DkNN
 pip3 install git+https://github.com/huggingface/transformers
 pip3 install datasets
-conda install -c intel scikit-learn
+conda install scikit-learn-intelex
 conda install pandas
 pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
 ```

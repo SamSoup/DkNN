@@ -2,16 +2,19 @@ from transformers import (
     AutoConfig,
     AutoModelForSequenceClassification,
     AutoTokenizer,
+    DataCollatorWithPadding,
+    EvalPrediction,
     HfArgumentParser,
     PretrainedConfig,
     TrainingArguments,
     Trainer,
+    default_data_collator,
     set_seed
 )
 from data import train_val_test_split, read_data
 from args import DataArguments, ModelArguments
 from transformers.trainer_utils import get_last_checkpoint
-from datasets import Dataset
+from datasets import load_dataset, load_metric, Dataset
 import os
 import torch
 import logging
@@ -96,10 +99,6 @@ def main():
     # logging
     set_up_logging(training_args)
 
-    # detect last checkpt
-    last_checkpoint = detect_last_checkpoint(training_args.output_dir, training_args.do_train, 
-                                             training_args.overwrite_output_dir, training_args.resume_from_checkpoint)
-
     # Set seed before initializing model.
     set_seed(training_args.seed)
     torch.manual_seed(training_args.seed)
@@ -138,6 +137,13 @@ def main():
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
+    ignore_mismatched_sizes = False
+    # max_position_embeddings=512 by default, which may be less than the maximum sequence length
+    # if that's case, then we randomly initialize the classification head by passing
+    # ignore_mismatched_sizes = True
+    if config.max_position_embeddings < data_args.max_seq_length:
+        config.max_position_embeddings = data_args.max_seq_length
+        ignore_mismatched_sizes = True
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,
@@ -152,6 +158,7 @@ def main():
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
+        ignore_mismatched_sizes=ignore_mismatched_sizes
     )
 
     # Padding strategy
@@ -162,9 +169,23 @@ def main():
         padding = False
 
     # Some models have set the order of the labels to use, so let's make sure we do use it.
-    print(model.config.label2id)
-    input()
+    label_to_id = None
+    if (model.config.label2id != PretrainedConfig(num_labels=num_labels).label2id):
+        # Some have all caps in their config, some don't.
+        label_name_to_id = {k.lower(): v for k, v in model.config.label2id.items()}
+        if list(sorted(label_name_to_id.keys())) == list(sorted(label_list)):
+            label_to_id = {i: int(label_name_to_id[label_list[i]]) for i in range(num_labels)}
+        else:
+            logger.warning(
+                "Your model seems to have been trained with labels, but they don't match the dataset: ",
+                f"model labels: {list(sorted(label_name_to_id.keys()))}, dataset labels: {list(sorted(label_list))}."
+                "\nIgnoring the model labels as a result.",
+            )
+    if label_to_id is not None:
+        model.config.label2id = label_to_id
+        model.config.id2label = {id: label for label, id in config.label2id.items()}
 
+    # check max_seq_length compared to model defaults
     if data_args.max_seq_length > tokenizer.model_max_length:
         logger.warning(
             f"The max_seq_length passed ({data_args.max_seq_length}) is larger than the maximum length for the"
@@ -172,25 +193,135 @@ def main():
         )
     max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
 
-    # def preprocess_function(examples):
-    #     # Tokenize the texts
-    #     args = (
-    #         (examples[sentence1_key],) if sentence2_key is None else (examples[sentence1_key], examples[sentence2_key])
-    #     )
-    #     result = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
+    def preprocess_function(examples):
+        # Tokenize the texts
+        args = ((examples[data_args.input_key],))
+        result = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
 
-    #     # Map labels to IDs (not necessary for GLUE tasks)
-    #     if label_to_id is not None and "label" in examples:
-    #         result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
-    #     return result
+        # Map labels to IDs
+        if label_to_id is not None and "label" in examples:
+            result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
+        return result
+    with training_args.main_process_first(desc="dataset map pre-processing"):
+        train_data = train_data.map(
+            preprocess_function,
+            batched=True,
+            load_from_cache_file=not data_args.overwrite_cache,
+            desc="Running tokenizer on dataset",
+        )
+        eval_data = eval_data.map(
+            preprocess_function,
+            batched=True,
+            load_from_cache_file=not data_args.overwrite_cache,
+            desc="Running tokenizer on dataset",
+        )
+        test_data = test_data.map(
+            preprocess_function,
+            batched=True,
+            load_from_cache_file=not data_args.overwrite_cache,
+            desc="Running tokenizer on dataset",
+        )
 
-    # with training_args.main_process_first(desc="dataset map pre-processing"):
-    #     raw_datasets = raw_datasets.map(
-    #         preprocess_function,
-    #         batched=True,
-    #         load_from_cache_file=not data_args.overwrite_cache,
-    #         desc="Running tokenizer on dataset",
-    #     )
-    
+    # make sure that we trunk examples, if specified
+    check = [
+        (training_args.do_train, data_args.max_train_samples, train_data),
+        (training_args.do_eval, data_args.max_eval_samples, eval_data),
+        (training_args.do_predict, data_args.max_test_samples, test_data),
+    ]
+    for do, sample_limit, data in check:
+        if do and sample_limit is not None:
+            data = data.select(range(min(len(train_data), sample_limit)))
+
+    # add a unique tag for the training examples - might be useful for retrieval later
+    new_column = list(range(train_data.num_rows))
+    train_data = train_data.add_column("tag", new_column)
+
+    # Log a few random samples from the training set:
+    if training_args.do_train:
+        for index in random.sample(range(len(train_data)), 3):
+            logger.info(f"Sample {index} of the training set: {train_data[index]}.")
+
+    # Custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
+    # predictions and label_ids field) and has to return a dictionary string to float.
+    def compute_metrics(p: EvalPrediction):
+        # see datasets.list_metrics() for the complete list
+        metric = load_metric("accuracy", "f1", "precision", "recall", "roc_auc")
+        preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
+        preds = np.argmax(preds, axis=1)
+        return metric.compute(predictions=preds, references=p.label_ids)
+
+    # Data collator will default to DataCollatorWithPadding when the tokenizer is passed to Trainer, so we change it if
+    # we already did the padding.
+    if data_args.pad_to_max_length:
+        data_collator = default_data_collator
+    elif training_args.fp16:
+        data_collator = DataCollatorWithPadding(tokenizer, pad_to_multiple_of=8)
+    else:
+        data_collator = None
+
+    # torch.cuda.empty_cache()
+
+    # Initialize our Trainer
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_data if training_args.do_train else None,
+        eval_dataset=eval_data if training_args.do_eval else None,
+        compute_metrics=compute_metrics,
+        tokenizer=tokenizer,
+        data_collator=data_collator,
+    )
+
+    # detect last checkpt
+    last_checkpoint = detect_last_checkpoint(training_args.output_dir, training_args.do_train, 
+                                             training_args.overwrite_output_dir, training_args.resume_from_checkpoint)
+
+    # Training
+    if training_args.do_train:
+        logger.info("*** Train ***")
+        checkpoint = None
+        if training_args.resume_from_checkpoint is not None:
+            checkpoint = training_args.resume_from_checkpoint
+        elif last_checkpoint is not None:
+            checkpoint = last_checkpoint
+        train_result = trainer.train(resume_from_checkpoint=checkpoint)
+        metrics = train_result.metrics
+        max_train_samples = (
+            data_args.max_train_samples if data_args.max_train_samples is not None else len(train_data)
+        )
+        metrics["train_samples"] = min(max_train_samples, len(train_data))
+        trainer.save_model()  # Saves the tokenizer too
+        trainer.log_metrics("train", metrics)
+        trainer.save_metrics("train", metrics)
+        trainer.save_state()
+
+    # Evaluation
+    if training_args.do_eval:
+        logger.info("*** Evaluate ***")
+        metrics = trainer.evaluate(eval_data=eval_data)
+        max_eval_samples = (
+            data_args.max_eval_samples if data_args.max_eval_samples is not None else len(eval_data)
+        )
+        metrics["eval_samples"] = min(max_eval_samples, len(eval_data))
+        trainer.log_metrics("eval", metrics)
+        trainer.save_metrics("eval", combined if task is not None and "mnli" in task else metrics)
+
+    # Test set Prediction
+    if training_args.do_predict:
+        logger.info("*** Predict ***")
+        # Removing the `label` columns because it contains -1 and Trainer won't like that.
+        test_data = test_data.remove_columns("label")
+        predictions = trainer.predict(test_data, metric_key_prefix="predict").predictions
+        predictions = np.argmax(predictions, axis=1)
+
+        output_predict_file = os.path.join(training_args.output_dir, f"predict_results_{task}.txt")
+        if trainer.is_world_process_zero():
+            with open(output_predict_file, "w") as writer:
+                logger.info(f"***** Predict results {task} *****")
+                writer.write("index\tprediction\n")
+                for index, item in enumerate(predictions):
+                    item = label_list[item]
+                    writer.write(f"{index}\t{item}\n")
+
 if __name__ == "__main__":
     main()
