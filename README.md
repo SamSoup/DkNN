@@ -29,5 +29,7 @@ BART
 conda create --name sam python=3.9
 conda activate sam
 pip3 install git+https://github.com/huggingface/transformers
+pip3 install datasets
 conda install -c intel scikit-learn
+conda install pandas
 ```
