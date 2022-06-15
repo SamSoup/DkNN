@@ -153,7 +153,44 @@ def main():
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
-    
+
+    # Padding strategy
+    if data_args.pad_to_max_length:
+        padding = "max_length"
+    else:
+        # We will pad later, dynamically at batch creation, to the max sequence length in each batch
+        padding = False
+
+    # Some models have set the order of the labels to use, so let's make sure we do use it.
+    print(model.config.label2id)
+    input()
+
+    if data_args.max_seq_length > tokenizer.model_max_length:
+        logger.warning(
+            f"The max_seq_length passed ({data_args.max_seq_length}) is larger than the maximum length for the"
+            f"model ({tokenizer.model_max_length}). Using max_seq_length={tokenizer.model_max_length}."
+        )
+    max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
+
+    # def preprocess_function(examples):
+    #     # Tokenize the texts
+    #     args = (
+    #         (examples[sentence1_key],) if sentence2_key is None else (examples[sentence1_key], examples[sentence2_key])
+    #     )
+    #     result = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
+
+    #     # Map labels to IDs (not necessary for GLUE tasks)
+    #     if label_to_id is not None and "label" in examples:
+    #         result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
+    #     return result
+
+    # with training_args.main_process_first(desc="dataset map pre-processing"):
+    #     raw_datasets = raw_datasets.map(
+    #         preprocess_function,
+    #         batched=True,
+    #         load_from_cache_file=not data_args.overwrite_cache,
+    #         desc="Running tokenizer on dataset",
+    #     )
     
 if __name__ == "__main__":
     main()

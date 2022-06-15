@@ -9,7 +9,13 @@ class DataArguments:
     Using `HfArgumentParser` we can turn this class into argparse arguments to be able to specify 
     them on the command line. Structure follows from run_glue.py from Transformers.
     """
-
+    max_seq_length: int = field(
+        default=1024,
+        metadata={
+            "help": "The maximum total input sequence length after tokenization. Sequences longer "
+            "than this will be truncated, sequences shorter will be padded."
+        },
+    )
     max_train_samples: Optional[int] = field(
         default=None,
         metadata={
