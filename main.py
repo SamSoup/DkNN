@@ -112,7 +112,7 @@ def main():
         train_data, eval_data, test_data = train_val_test_split(
             data_args.train_file, data_args.train_data_pct,
             data_args.eval_data_pct, data_args.test_data_pct,
-            data_args.data_seed
+            data_args.shuffle_seed
         )
     else:
         train_data = read_data(data_args.train_file)

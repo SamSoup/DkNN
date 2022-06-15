@@ -32,4 +32,5 @@ pip3 install git+https://github.com/huggingface/transformers
 pip3 install datasets
 conda install -c intel scikit-learn
 conda install pandas
+pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
 ```

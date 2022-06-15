@@ -11,5 +11,5 @@ output_file = sys.argv[2]
 
 columns = ["Tweet", "Orig_Label", "Vote"]
 data = pd.read_csv(data_file, sep=None, names=columns, engine='python')
-data["Label"] = data["Orig_Label"] == "hateful"
+data["label"] = data["Orig_Label"] == "hateful"
 data.to_csv(output_file, header=True, index=False)

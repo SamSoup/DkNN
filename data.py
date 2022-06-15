@@ -35,7 +35,7 @@ def train_val_test_split(data_file: str, train_pct: float, eval_pct: float,
 
     Args:
         data_file (str): a path to the entire dataset, note that the labels (y) column 
-                         must be named `Label`
+                         must be named `label`
         train_pct (float): % of data to keep for the training set
         eval_pct (float): % of data to keep for the validation set
         test_pct (float): % of data to keep for the test set
@@ -49,9 +49,9 @@ def train_val_test_split(data_file: str, train_pct: float, eval_pct: float,
     eval_and_test_pct = eval_pct + test_pct
     data_train, data_eval_and_test = train_test_split(data, 
         train_size=train_pct, random_state=seed, shuffle=True, 
-        stratify=data["Label"])
+        stratify=data["label"])
     data_eval, data_test = train_test_split(data_eval_and_test, 
         test_size=test_pct / eval_and_test_pct, random_state=seed, shuffle=True, 
-        stratify=data_eval_and_test["Label"])
+        stratify=data_eval_and_test["label"])
     
     return data_train, data_eval, data_test

@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Optional
+import numpy as np
 
 @dataclass
 class DataArguments:
@@ -65,7 +66,7 @@ class DataArguments:
             "help": "The amount of data to use for test set, only used if do_train_val_test_split is True."
         }
     )
-    data_seed : Optional[int] = field (
+    shuffle_seed : Optional[int] = field (
         default = 42, metadata = {
             "help": "The random seed for shuffling rows for train-val-test split and other data related operations."
         }
@@ -83,7 +84,7 @@ class DataArguments:
                     v.endswith('.csv') or v.endswith('.json')
                 ), f"{k} path must be a file ending in .tsv or .txt"
         if self.do_train_val_test_split:
-            assert(self.train_data_pct + self.test_data_pct + self.test_data_pct == 1.0)
+            assert(np.isclose(self.train_data_pct + self.eval_data_pct + self.test_data_pct, 1.0))
 
 @dataclass
 class ModelArguments:
@@ -119,9 +120,4 @@ class ModelArguments:
             "help": "Will use the token generated when running `transformers-cli login` (necessary to use this script "
             "with private models)."
         },
-    )
-    seed: Optional[int] = field (
-        default = 42, metadata = {
-            "help": "The random seed for training models, such as weight initialization."
-        }
     )
