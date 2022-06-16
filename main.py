@@ -1,3 +1,7 @@
+"""
+Main script for execution
+"""
+
 from transformers import (
     AutoConfig,
     AutoModelForSequenceClassification,

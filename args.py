@@ -1,3 +1,9 @@
+"""
+Specify the Command line arguments in the form of @dataclass (Huggingface)
+
+See python3 main.py -help for all possible arugments
+"""
+
 from dataclasses import dataclass, field
 from typing import Optional
 import numpy as np
