@@ -1,5 +1,8 @@
 # Custom
 ProtoTEx/
+*.e*
+*.o*
+*.sbatch
 
 # test notebooks
 *.ipynb_checkpoints/
