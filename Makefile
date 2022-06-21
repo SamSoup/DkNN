@@ -3,8 +3,8 @@ preprocess:
 
 run:
 	python3 main.py \
-	--model_name_or_path vinai/bertweet-large \
-	--train_file ./data/train_small.csv \
+	--model_name_or_path distilbert-base-uncased \
+	--train_file ./data/train.csv \
 	--seed 42 \
 	--shuffle_seed 42 \
 	--output_dir ./output/bert \
@@ -20,3 +20,7 @@ run:
 	--num_train_epochs 3 \
 	--per_device_train_batch_size 64 \
 	--per_device_eval_batch_size 64 \
+
+clean:
+	rm -f *.e*
+	rm -f *.o*

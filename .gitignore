@@ -3,6 +3,7 @@ ProtoTEx/
 *.e*
 *.o*
 *.sbatch
+output/
 
 # test notebooks
 *.ipynb_checkpoints/

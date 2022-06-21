@@ -32,5 +32,13 @@ pip3 install git+https://github.com/huggingface/transformers
 pip3 install datasets
 pip3 install -U scikit-learn
 conda install pandas
-pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
+pip3 install --user torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113 --no-cache-dir
+pip3 install --user filelock packaging>=20.0 pyyaml>=5.1 scipy>=1.3.2 packaging pandas --no-cache-dir
 ```
+
+On TACC: add these flags to pip install
+
+--user 
+--no-cache-dir
+
+idev -p gpu_a100
