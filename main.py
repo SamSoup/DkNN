@@ -248,12 +248,16 @@ def main():
 
     # Custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
     # predictions and label_ids field) and has to return a dictionary string to float.
+    scores = ["accuracy", "f1", "precision", "recall"]
     def compute_metrics(p: EvalPrediction):
-        # see datasets.list_metrics() for the complete list
-        metric = load_metric("accuracy", "f1", "precision", "recall", "roc_auc")
+        computed_scores = {}
         preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
         preds = np.argmax(preds, axis=1)
-        return metric.compute(predictions=preds, references=p.label_ids)
+        # see datasets.list_metrics() for the complete list
+        for score in scores:
+            metric_func = load_metric(score)
+            computed_scores[score] = metric_func.compute(predictions=preds, references=p.label_ids)[score]
+        return computed_scores
 
     # Data collator will default to DataCollatorWithPadding when the tokenizer is passed to Trainer, so we change it if
     # we already did the padding.
@@ -303,7 +307,7 @@ def main():
     # Evaluation
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
-        metrics = trainer.evaluate(eval_data=eval_data)
+        metrics = trainer.evaluate(eval_dataset=eval_data)
         max_eval_samples = (
             data_args.max_eval_samples if data_args.max_eval_samples is not None else len(eval_data)
         )
