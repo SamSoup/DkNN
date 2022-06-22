@@ -7,7 +7,7 @@ run:
 	--train_file ./data/train.csv \
 	--seed 42 \
 	--shuffle_seed 42 \
-	--output_dir ./output/bert \
+	--output_dir ./output/distilbert-base-uncased-2 \
 	--do_train_val_test_split \
 	--overwrite_output_dir \
 	--do_train \
@@ -16,8 +16,8 @@ run:
 	--pad_to_max_length \
 	--input_key Tweet \
 	--report_to none \
-	--learning_rate 2e-5 \
-	--num_train_epochs 3 \
+	--learning_rate 1e-5 \
+	--num_train_epochs 10 \
 	--per_device_train_batch_size 64 \
 	--per_device_eval_batch_size 64 \
 
