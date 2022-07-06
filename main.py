@@ -190,7 +190,6 @@ def main():
     if label_to_id is not None:
         model.config.label2id = label_to_id
         model.config.id2label = {id: label for label, id in config.label2id.items()}
-
     # check max_seq_length compared to model defaults
     if data_args.max_seq_length > tokenizer.model_max_length:
         logger.warning(
@@ -317,8 +316,10 @@ def main():
                 compute_metrics=compute_metrics,
                 tokenizer=tokenizer,
                 data_collator=data_collator,
+                label_list = label_list,
                 layers_to_save=data_args.layers_to_save,
-                num_neighbors=10
+                num_neighbors=10,
+                save_database_path=data_args.save_database_path
             )
         metrics = trainer.evaluate(eval_dataset=eval_data)
         max_eval_samples = (

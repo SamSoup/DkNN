@@ -33,6 +33,7 @@ pip3 install -U scikit-learn
 conda install pandas
 pip3 install --user torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113 --no-cache-dir
 pip3 install --user filelock packaging>=20.0 pyyaml>=5.1 scipy>=1.3.2 packaging pandas --no-cache-dir
+conda install -n DkNN ipykernel --update-deps --force-reinstall
 ```
 
 On TACC: add these flags to pip install

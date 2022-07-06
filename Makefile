@@ -47,7 +47,7 @@ run-test:
 	python3 main.py \
 	--model_name_or_path distilbert-base-uncased \
 	--resume_from_checkpoint ./output/distilbert-base-uncased-2 \
-	--train_file ./data/train_data.csv \
+	--train_file ./data/train_small.csv \
 	--validation_file ./data/eval_data.csv \
 	--test_file ./data/test_data.csv \
 	--seed 42 \
@@ -64,6 +64,7 @@ run-test:
 	--per_device_eval_batch_size 64 \
 	--do_DkNN \
 	--layers_to_save 1 2 3 4 5 \
+	--save_database_path ./data/layer_representation_database_small \
 
 clean:
 	rm -f *.e*

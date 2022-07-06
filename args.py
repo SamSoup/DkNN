@@ -109,6 +109,11 @@ class DataArguments:
             "by default no layers are saved."
         }
     )
+    save_database_path: Optional[str] = field (
+        default=None, metadata = {
+            "help": "Directory path to save the training data representation, by default means overwriting what's in the directory"
+        }
+    )
 
     def __post_init__(self):
         to_check = {
