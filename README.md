@@ -19,9 +19,8 @@ The dataset covers 80 thousand tweets categorized under hateful, abusive, normal
 
 # Baseline
 
-BERT
+DistillBert
 
-BART
 
 # Installation
 
@@ -42,3 +41,7 @@ On TACC: add these flags to pip install
 --no-cache-dir
 
 idev -p gpu_a100
+
+# Execution
+
+Note that it's the responsibility of the user to specify which layers' representations to save for DkNN using the `layers_to_save` argument. 

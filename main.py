@@ -19,6 +19,7 @@ from data import train_val_test_split, read_data
 from args import DataArguments, ModelArguments
 from transformers.trainer_utils import get_last_checkpoint
 from datasets import load_dataset, load_metric, Dataset
+from DkNNTrainer import DkNNTrainer
 import numpy as np
 import os
 import torch
@@ -120,7 +121,7 @@ def main():
         )
     else:
         train_data = read_data(data_args.train_file)
-        eval_data = read_data(data_args.eval_file)
+        eval_data = read_data(data_args.validation_file)
         test_data = read_data(data_args.test_file)
 
     # convert data to what models expect
@@ -307,6 +308,18 @@ def main():
     # Evaluation
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
+        if data_args.do_DkNN:
+            trainer = DkNNTrainer(
+                model=model,
+                args=training_args,
+                train_dataset=train_data,
+                eval_dataset=eval_data if training_args.do_eval else None,
+                compute_metrics=compute_metrics,
+                tokenizer=tokenizer,
+                data_collator=data_collator,
+                layers_to_save=data_args.layers_to_save,
+                num_neighbors=10
+            )
         metrics = trainer.evaluate(eval_dataset=eval_data)
         max_eval_samples = (
             data_args.max_eval_samples if data_args.max_eval_samples is not None else len(eval_data)

@@ -5,7 +5,7 @@ See python3 main.py -help for all possible arugments
 """
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, List
 import numpy as np
 
 @dataclass
@@ -96,6 +96,17 @@ class DataArguments:
     input_key: str = field (
         default = "input", metadata = {
             "help": "The name of the column that contains the input sequences to the model."
+        }
+    )
+    do_DkNN: bool = field (
+        default = False, metadata = {
+            "help": "Should the model be a DkNN model? (ie. use NN for inference)"
+        }
+    )
+    layers_to_save: Optional[List[int]] = field (
+        default_factory=list, metadata = {
+            "help": "A list of layers to save its representation for (DkNN only) in python list format; "
+            "by default no layers are saved."
         }
     )
 
