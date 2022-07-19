@@ -94,7 +94,8 @@ class DkNNTrainer(Trainer):
             print("***** Loading scores from specified path *****")
             self.DkNNClassifier.scores = np.loadtxt(save_nonconform_scores_path, delimiter=",")
         else:
-            self.DkNNClassifier.scores = self.compute_nonconformity_score_for_caliberation_set(self, eval_dataset, save_nonconform_scores_path)
+            label_to_id = {label: i for i, label in enumerate(label_list)}
+            self.DkNNClassifier.scores = self.compute_nonconformity_score_for_caliberation_set(eval_dataset, save_nonconform_scores_path, label_to_id)
 
     def save_training_points_representations(self, train_dataset: Dataset, layers_to_save: List[int], 
                                              save_database_path: Optional[str]) -> Dict[int, np.array]:
@@ -146,7 +147,8 @@ class DkNNTrainer(Trainer):
                 progress_bar.update(1)
         return database
 
-    def compute_nonconformity_score_for_caliberation_set(self, eval_data: Dataset, save_nonconform_scores_path: str):
+    def compute_nonconformity_score_for_caliberation_set(self, eval_data: Dataset, save_nonconform_scores_path: str, 
+                                                         label_to_id: Dict[Any, int]):
         """
         We compute and store all non-conformity scores for the caliberation set
         as an numpy array of dimensions (# of example in caliberation, # of possible labels)
@@ -154,8 +156,9 @@ class DkNNTrainer(Trainer):
         Args:
             eval_data (Dataset): caliberation dataset
             save_nonconform_scores_path (Optional[str], optional): path to save nonconformity scores for evaluation data. Defaults to None.
+            label_to_id (Dict[Any, int]): dictionary mapping from original format of label to some integer id
         """
-    
+
         nonconformity_scores = np.zeros(len(eval_data))
         print("***** Running DkNN - Computing Nonconformity Scores for Caliberation Data *****")
         eval_dataloader = DataLoader(self._remove_unused_columns(eval_data), shuffle=True, 
@@ -165,14 +168,13 @@ class DkNNTrainer(Trainer):
         self.model.eval()
         for i, batch in enumerate(eval_dataloader):
             inputs = self._prepare_inputs(batch)
-            inputs.pop("tag") # do not care abut tags for eval data
             labels = inputs.pop("labels").cpu().numpy()
             with torch.no_grad():
                 outputs = self.model(**inputs, output_hidden_states=True)                   # dict: {'loss', 'logits', 'hidden_states'}
             hidden_states = outputs['hidden_states']
             neighbors = self.DkNNClassifier.nearest_neighbors(hidden_states)
             for j, label in enumerate(labels):
-                label_id = self.label_to_id[label]
+                label_id = label_to_id[label]
                 # this is the conformity score per class (aka the probability of this example belonging 
                 # to class `label`)
                 nonconform_score = compute_nonconformity_score(neighbors, label_id)
