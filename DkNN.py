@@ -14,7 +14,7 @@ class DkNN:
     required is that given a batch of tensors, return the k nearest neighbor per layer
     for the examples in the batch
     """
-    def __init__(self, k:int, layers_to_save: List[int], database: Dict[int:np.array], 
+    def __init__(self, k:int, layers_to_save: List[int], database: Dict[int, np.array], 
                  layer_dim: int, label_list: List[Any] = None,):
         """
         Initialize basic parameters that all KNN classifiers will need

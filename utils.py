@@ -24,7 +24,7 @@ def get_layer_representations(self, hidden_states: torch.tensor) -> torch.tensor
     return torch.mean(hidden_states, dim=1).squeeze().detach().cpu()
 
 def save_training_points_representations(self, train_dataloader: DataLoader, layers_to_save: List[int], 
-                                         save_database_path: Optional[str], model: nn.Module) -> Dict[int:np.array]:
+                                         save_database_path: Optional[str], model: nn.Module) -> Dict[int, np.array]:
     """
     Following Antigoni Maria Founta et. al. - we make one more pass through the training set
     and save specified layers' representations in a database (for now simply a DataFrame, may
