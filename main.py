@@ -15,6 +15,7 @@ from transformers import (
     default_data_collator,
     set_seed
 )
+from typing import Dict
 from data import train_val_test_split, read_data
 from args import DataArguments, ModelArguments
 from transformers.trainer_utils import get_last_checkpoint
@@ -249,7 +250,33 @@ def main():
     # Custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
     # predictions and label_ids field) and has to return a dictionary string to float.
     scores = ["accuracy", "f1", "precision", "recall"]
-    def compute_metrics(p: EvalPrediction):
+    def compute_metrics(p: EvalPrediction) -> Dict[str, float]:
+        computed_scores = {}
+        preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
+        preds = np.argmax(preds, axis=1)
+        # see datasets.list_metrics() for the complete list
+        for score in scores:
+            metric_func = load_metric(score)
+            computed_scores[score] = metric_func.compute(predictions=preds, references=p.label_ids)[score]
+        return computed_scores
+
+    def compute_metrics_DkNN(p: EvalPrediction) -> Dict[str, float]:
+        """
+        Custom metric computation for Deep K Nearest Neighbors, following https://arxiv.org/pdf/1803.04765.pdf
+        Section IV B - inductive non-conformity with a slight modification. Instead of \alpha(x, y) denoating
+        the number of non-conforming neighbors for example `x` for class `y`, we denote \alpha(x, y) as the 
+        log *fraction* of non-conforming neighbors for example `x` for class `y`. In this way, we can compute
+        \alpha(x, y) from the log-probabilities of each class as follows:
+        
+        \alpha(x, y) = \sum_{y' \in {Y - y} } log(P(x, y))
+
+        Args:
+            p (EvalPrediction): the predicitions containing logits (log-probabilities) for a batch of example
+
+        Returns:
+            Dict[str, float]: the dictionary of various metrics and their corresponding values
+        """
+
         computed_scores = {}
         preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
         preds = np.argmax(preds, axis=1)
@@ -267,8 +294,6 @@ def main():
         data_collator = DataCollatorWithPadding(tokenizer, pad_to_multiple_of=8)
     else:
         data_collator = None
-
-    # torch.cuda.empty_cache()
 
     # Initialize our Trainer
     trainer = Trainer(

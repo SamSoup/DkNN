@@ -4,11 +4,13 @@ preprocess:
 run:
 	python3 main.py \
 	--model_name_or_path distilbert-base-uncased \
-	--train_file ./data/train.csv \
+	--train_file ./data/train_data.csv \
+	--validation_file ./data/eval_data.csv \
+	--test_file ./data/test_data.csv \
 	--seed 42 \
 	--shuffle_seed 42 \
-	--output_dir ./output/distilbert-base-uncased-2 \
-	--do_train_val_test_split \
+	--output_dir ./output/distilbert-base-uncased \
+	--do_train_val_test_split False \
 	--overwrite_output_dir \
 	--do_train \
 	--do_eval \
