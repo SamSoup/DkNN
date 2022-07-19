@@ -5,8 +5,10 @@ See python3 main.py -help for all possible arugments
 """
 
 from dataclasses import dataclass, field
+from socket import AF_NETROM
 from typing import Optional, List
 import numpy as np
+import os
 
 @dataclass
 class DataArguments:
@@ -115,9 +117,19 @@ class DataArguments:
             "by default no layers are saved."
         }
     )
+    read_from_database_path: bool = field (
+        default=False, metadata = {
+            "help": "If true, read from `save_database_path` instead of writing to it."
+        }
+    )
     save_database_path: Optional[str] = field (
         default=None, metadata = {
             "help": "Directory path to save the training data representation, by default means overwriting what's in the directory"
+        }
+    )
+    read_from_scores_path: bool = field (
+        default=False, metadata = {
+            "help": "If true, read from `save_nonconform_scores_path` instead of writing to it."
         }
     )
     save_nonconform_scores_path: Optional[str] = field (
@@ -143,6 +155,14 @@ class DataArguments:
             ), "train, eval, test split % must add up to 1"
         if self.DkNN_method is not None:
             assert(self.DkNN_method in {"KD-Tree", "LSH"}), "DkNN method must be one of {KD-Tree, LSH}"
+        if self.read_from_database_path is not None:
+            assert(
+                os.path.exists(self.save_database_path) and os.path.isdir(self.save_database_path)
+            ), f"If reading from database path, then {self.save_database_path} must already exist and be valid directory"
+        if self.read_from_scores_path is not None:
+            assert(
+                os.path.exists(self.save_nonconform_scores_path) and os.path.isfile(self.save_nonconform_scores_path)
+            ), f"If reading from database path, then {self.save_nonconform_scores_path} must already exist and be a valid path"
         if self.save_nonconform_scores_path is not None:
             assert(self.save_nonconform_scores_path.endswith(".csv")), f"{self.save_nonconform_scores_path} must end in a .csv"
 

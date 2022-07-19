@@ -319,7 +319,10 @@ def main():
                 num_neighbors=data_args.K,
                 label_list = label_list,
                 layers_to_save=data_args.layers_to_save,
-                save_database_path=data_args.save_database_path
+                read_from_database_path=data_args.read_from_database_path,
+                save_database_path=data_args.save_database_path,
+                read_from_scores_path=data_args.read_from_scores_path,
+                save_nonconform_scores_path=data_args.save_nonconform_scores_path
             )
         metrics = trainer.evaluate(eval_dataset=eval_data)
         max_eval_samples = (

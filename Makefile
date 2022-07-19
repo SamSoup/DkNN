@@ -46,7 +46,9 @@ run-DkNN:
 	--DkNN_method KD-Tree \
 	--K 10 \
 	--layers_to_save 1 2 3 4 5 \
+	--read_from_database_path False \
 	--save_database_path ./data/layer_representation_database \
+	--read_from_scores_path False \
 	--save_nonconform_scores_path ./data/non_conformity_scores.csv
 
 clean:
