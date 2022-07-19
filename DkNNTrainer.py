@@ -81,7 +81,8 @@ class DkNNTrainer(Trainer):
                             eval_dataset, tokenizer, model_init, compute_metrics,
                             callbacks, optimizers, preprocess_logits_for_metrics)
         torch.cuda.empty_cache() # save memory before iterating through dataset
-        if read_from_scores_path:
+        if read_from_database_path:
+            print("***** Loading database of layer representation from specified path *****")
             database = { layer: np.loadtxt(os.path.join(save_database_path, f"layer_{layer}.csv"), delimiter=",") for layer in layers_to_save }
         else:
             database = self.save_training_points_representations(train_dataset, layers_to_save, save_database_path)
@@ -90,10 +91,10 @@ class DkNNTrainer(Trainer):
         elif DkNN_method == "LSH":
             self.DkNNClassifier = DkNN_LSH(num_neighbors, layers_to_save, database, self.model.config.hidden_size, label_list)
         if read_from_scores_path:
+            print("***** Loading scores from specified path *****")
             self.DkNNClassifier.scores = np.loadtxt(save_nonconform_scores_path, delimiter=",")
         else:
-            self.DkNNClassifier.scores = self.compute_nonconformity_score_for_caliberation_set(self, eval_dataset, 
-                                                                                            label_list, save_nonconform_scores_path)
+            self.DkNNClassifier.scores = self.compute_nonconformity_score_for_caliberation_set(self, eval_dataset, save_nonconform_scores_path)
 
     def save_training_points_representations(self, train_dataset: Dataset, layers_to_save: List[int], 
                                              save_database_path: Optional[str]) -> Dict[int, np.array]:
