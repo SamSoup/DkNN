@@ -127,8 +127,8 @@ class DkNNTrainer(Trainer):
             if os.path.exists(save_database_path) and os.path.isdir(save_database_path):
                 shutil.rmtree(save_database_path)
             os.makedirs(save_database_path)
-            progress_bar = tqdm(range(len(self.layers_to_save)))
-            for layer in self.layers_to_save:
+            progress_bar = tqdm(range(len(layers_to_save)))
+            for layer in layers_to_save:
                 save_file_name = os.path.join(save_database_path, f"layer_{layer}.csv")
                 np.savetxt(save_file_name, database[layer], delimiter=",")
                 progress_bar.update(1)

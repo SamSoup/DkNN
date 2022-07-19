@@ -12,5 +12,6 @@ def get_layer_representations(hidden_states: torch.tensor) -> torch.tensor:
     Returns:
         torch.tensor: (batch_size, self.layer_dim) of layer representations in order
     """
+
     # average across all tokens to obtain embedding -> (batch_size, embedding_dim)
     return torch.mean(hidden_states, dim=1).squeeze().detach().cpu()
