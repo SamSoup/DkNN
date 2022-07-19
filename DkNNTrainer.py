@@ -17,7 +17,7 @@ from transformers import (
     TrainingArguments
 )
 from typing import Callable, Union, Optional, Dict, List, Tuple, Any
-from utils import get_layer_representations
+from utils import get_layer_representations, compute_nonconformity_score
 from DkNN import DkNN_KD_TREE, DkNN_LSH
 from datasets import Dataset
 from torch.utils.data import DataLoader
@@ -60,7 +60,8 @@ class DkNNTrainer(Trainer):
         num_neighbors: int = 10,
         label_list: List[Any] = None,
         layers_to_save: List[int] = [],
-        save_database_path: Optional[str] = None
+        save_database_path: Optional[str] = None,
+        save_nonconform_scores_path: Optional[str] = None
     ):
         """
         Arguments follows directly from Transformers.Trainer except the following:
@@ -71,6 +72,7 @@ class DkNNTrainer(Trainer):
             layers_to_save (List[int], optional): the list of layer (indices) to save. Defaults to [].
             num_neighbors (int, optional): how many neighbors to examine per inference example. Defaults to 10.
             save_database_path (Optional[str], optional): path to save layer representations. Defaults to None.
+            save_nonconform_scores_path (Optional[str], optional): path to save nonconformity scores for evaluation data. Defaults to None.
         """
 
         Trainer.__init__(self, model, args, data_collator, train_dataset, 
@@ -82,6 +84,8 @@ class DkNNTrainer(Trainer):
             self.DkNNClassifier = DkNN_KD_TREE(num_neighbors, layers_to_save, database, self.model.config.hidden_size, label_list)
         elif DkNN_method == "LSH":
             self.DkNNClassifier = DkNN_LSH(num_neighbors, layers_to_save, database, self.model.config.hidden_size, label_list)
+        self.DkNNClassifier.scores = self.compute_nonconformity_score_for_caliberation_set(self, eval_dataset, 
+                                                                                           label_list, save_nonconform_scores_path)
 
     def save_training_points_representations(self, train_dataset: Dataset, layers_to_save: List[int], 
                                             save_database_path: Optional[str]) -> Dict[int, np.array]:
@@ -96,15 +100,14 @@ class DkNNTrainer(Trainer):
             save_database_path (Optional[str]): directory to save the layer representations, if not None
         """
 
-        print("***** Running DkNN - Computing Layer Representations *****")
+        print("***** Running DkNN - Computing Layer Representations for Training Examples *****")
         train_dataloader = DataLoader(self._remove_unused_columns(train_dataset), shuffle=True, 
                                         batch_size=self.args.train_batch_size, 
                                         collate_fn=self.data_collator)
         progress_bar = tqdm(range(len(train_dataloader)))
         self.model.eval()
         # Column metadata: [0-self.layer_dim = representation, label of this example, tag (index in train data)]
-        # total dim when finished = (training size) x (self.layer_dim + 3) per df, a total of len(self.layers_to_save) dataframes
-        # dict { layer_num: pd.Dataframe of layer representations for all training examples}
+        # total dim when finished = (training size) x (self.layer_dim + 3) per array, a total of len(self.layers_to_save) np.arrays
         database = { layer: None for layer in layers_to_save }
         for batch in train_dataloader:
             inputs = self._prepare_inputs(batch)
@@ -118,12 +121,12 @@ class DkNNTrainer(Trainer):
             for layer in layers_to_save:
                 layer_rep_np = get_layer_representations(hidden_states[layer])
                 layer_rep_np = np.concatenate(
-                    (layer_rep_np, tags.reshape(-1, 1), labels.reshape(-1, 1)), axis=1) # (batch_size, embedding_dim + 2)
+                    (layer_rep_np, tags.reshape(-1, 1), labels.reshape(-1, 1)), axis=1)     # (batch_size, embedding_dim + 2)
                 database[layer] = (np.append(database[layer], layer_rep_np, axis=0) 
                                    if database[layer] is not None else layer_rep_np)
             progress_bar.update(1)
         if save_database_path is not None:
-            print("***** Running DkNN - Saving Layer Representations *****")
+            print("***** Running DkNN - Saving Layer Representations for Training Examples *****")
             if os.path.exists(save_database_path) and os.path.isdir(save_database_path):
                 shutil.rmtree(save_database_path)
             os.makedirs(save_database_path)
@@ -133,6 +136,43 @@ class DkNNTrainer(Trainer):
                 np.savetxt(save_file_name, database[layer], delimiter=",")
                 progress_bar.update(1)
         return database
+
+    def compute_nonconformity_score_for_caliberation_set(self, eval_data: Dataset, save_nonconform_scores_path: str):
+        """
+        We compute and store all non-conformity scores for the caliberation set
+        as an numpy array of dimensions (# of example in caliberation, # of possible labels)
+        
+        Args:
+            eval_data (Dataset): caliberation dataset
+            save_nonconform_scores_path (Optional[str], optional): path to save nonconformity scores for evaluation data. Defaults to None.
+        """
+    
+        nonconformity_scores = np.zeros(len(eval_data))
+        print("***** Running DkNN - Computing Nonconformity Scores for Caliberation Data *****")
+        eval_dataloader = DataLoader(self._remove_unused_columns(eval_data), shuffle=True, 
+                                        batch_size=self.args.eval_batch_size, 
+                                        collate_fn=self.data_collator)
+        progress_bar = tqdm(range(len(eval_dataloader)))
+        self.model.eval()
+        for i, batch in enumerate(eval_dataloader):
+            inputs = self._prepare_inputs(batch)
+            inputs.pop("tag") # do not care abut tags for eval data
+            labels = inputs.pop("labels").cpu().numpy()
+            with torch.no_grad():
+                outputs = self.model(**inputs, output_hidden_states=True)                   # dict: {'loss', 'logits', 'hidden_states'}
+            hidden_states = outputs['hidden_states']
+            neighbors = self.DkNNClassifier.nearest_neighbors(hidden_states)
+            for j, label in enumerate(labels):
+                label_id = self.label_to_id[label]
+                # this is the conformity score per class (aka the probability of this example belonging 
+                # to class `label`)
+                nonconform_score = compute_nonconformity_score(neighbors, label_id)
+                nonconformity_scores[i*self.args.eval_batch_size + j] = nonconform_score
+            progress_bar.update(1)
+        if save_nonconform_scores_path is not None:
+            print("***** Running DkNN - Saving Layer Representations *****")
+            np.savetxt(save_nonconform_scores_path, nonconformity_scores, delimiter=",")
+        return nonconformity_scores
 
     def compute_loss(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]], 
                      return_outputs: bool = False):
@@ -165,7 +205,7 @@ class DkNNTrainer(Trainer):
         if self.args.past_index >= 0:
             self._past = outputs[self.args.past_index]
         neighbors = self.DkNNClassifier.nearest_neighbors(hidden_states)
-        loss, logits = self.DkNNClassifier.compute_loss_and_logits_DkNN(neighbors, labels)
+        loss, logits = self.DkNNClassifier.compute_loss_and_logits_DkNN(neighbors, self.scores,labels)
         outputs = { "loss": loss, "logits": logits }
         if labels is not None and self.label_smoother is not None:
             loss = self.label_smoother(outputs, labels)

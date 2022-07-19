@@ -1,7 +1,7 @@
 from typing import List, Dict, Union, Any, Tuple, Optional
 from sklearn.neighbors import KDTree
 from tqdm.auto import tqdm
-from utils import get_layer_representations
+from utils import get_layer_representations, compute_nonconformity_score
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -22,8 +22,9 @@ class DkNN:
         Args:
             k (int): number of nearest neighbors to obtain per sample per layer
             layers_to_save (List[int]): the list of layers to save
-            database (Dict[int:np.array]): the database of example representations per layer
+            database (Dict[int, np.array]): the database of example representations per layer
             layer_dim (int): the hidden size of each layer
+            label_list (List[Any]): the list of all possible labels (y's) in training Dataset.
         """
 
         self.k = k
@@ -62,21 +63,29 @@ class DkNN:
 
     def compute_loss_and_logits_DkNN(self, neighbors: np.ndarray, labels: Optional[torch.tensor]):
         """
-        Compute loss and logits using the nearest k neighbors
-
+        Compute loss and logits using the nearest k neighbors. We follow https://arxiv.org/pdf/1803.04765.pdf
+        and use the fraction of nonconformity measures for the calibration data that are larger than the test input’s.
+        This is the empirical p-value of for test example x with candidate label j: p_j(x)
+            p_j(x) = | {α ∈ A : α ≥ α(x, j)} | / |A| 
+        where α is a counter over all non-conformity socres in the set of caliberation data and α(x, j) is the 
+        non-conformity score for some test example x with candidate label j
+        
         Args:
             neighbors (np.ndarray): an array of (batch_size, num of layers * k)
             labels: (Optional[torch.tensor]): labels for the batch of input examples, if any
         """
-        # first find the log-probabilities for each class 
-        probs = np.zeros((neighbors.shape[0], len(self.label_list)))
+        if self.scores is None:
+            raise "You have NOT computed the non-conformity scores yet!"
+
+        # Instead of log probabilites, we instead compute the empirical p-value of candidate label j
+        # per example, whereby the predicted label for the test input can still be computed using 
+        # arg max -> largest empirical p-value; these are our logits 
+        empirical_p = np.zeros((neighbors.shape[0], len(self.label_list))) 
         for i, label in enumerate(self.label_list):
             label_id = self.label_to_id[label]
-            # this is the conformity score per class (aka the probability of this example belonging 
-            # to class `label`)
-            prob = (neighbors == label_id).sum(axis=1) / neighbors.shape[1]
-            probs[:, i] = prob
-        logits = torch.log(torch.from_numpy(probs).to(device)) # (self.args.eval_batch_size, len(self.label_list))
+            nonconform_score = compute_nonconformity_score(neighbors, label_id)
+            empirical_p[:, i] = (self.scores >= nonconform_score).sum() / len(self.scores)
+        logits = torch.from_numpy(empirical_p).to(device) # (self.args.eval_batch_size, len(self.label_list))
         if labels is not None:
             # Negative log likelihood loss for C potential classes
             loss = F.nll_loss(logits, labels) # torch.tensor(len(self.label_list))

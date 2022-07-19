@@ -120,6 +120,11 @@ class DataArguments:
             "help": "Directory path to save the training data representation, by default means overwriting what's in the directory"
         }
     )
+    save_nonconform_scores_path: Optional[str] = field (
+        default=None, metadata = {
+            "help": "Path to save the non-conformity scores for the validation data, must end in .csv"
+        }
+    )
 
     def __post_init__(self):
         to_check = {
@@ -138,6 +143,8 @@ class DataArguments:
             ), "train, eval, test split % must add up to 1"
         if self.DkNN_method is not None:
             assert(self.DkNN_method in {"KD-Tree", "LSH"}), "DkNN method must be one of {KD-Tree, LSH}"
+        if self.save_nonconform_scores_path is not None:
+            assert(self.save_nonconform_scores_path.endswith(".csv")), f"{self.save_nonconform_scores_path} must end in a .csv"
 
 @dataclass
 class ModelArguments:

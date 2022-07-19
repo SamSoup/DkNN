@@ -47,6 +47,7 @@ run-DkNN:
 	--K 10 \
 	--layers_to_save 1 2 3 4 5 \
 	--save_database_path ./data/layer_representation_database \
+	--save_nonconform_scores_path ./data/non_conformity_scores.csv
 
 clean:
 	rm -f *.e*
