@@ -72,6 +72,8 @@ class DkNN:
         probs = np.zeros((neighbors.shape[0], len(self.label_list)))
         for i, label in enumerate(self.label_list):
             label_id = self.label_to_id[label]
+            # this is the conformity score per class (aka the probability of this example belonging 
+            # to class `label`)
             prob = (neighbors == label_id).sum(axis=1) / neighbors.shape[1]
             probs[:, i] = prob
         logits = torch.log(torch.from_numpy(probs).to(device)) # (self.args.eval_batch_size, len(self.label_list))
@@ -89,7 +91,7 @@ class DkNN:
 class DkNN_KD_TREE(DkNN):
     def __init__(self, k:int, layers_to_save: List[int], database: List[np.array], 
                  layer_dim: int, label_list: List[Any] = None):
-        DkNN.__init__(k, layers_to_save, database, layer_dim, label_list)
+        DkNN.__init__(self, k, layers_to_save, database, layer_dim, label_list)
         self.trees = {
             layer: KDTree(self.database[layer][:, :self.layer_dim], metric="l2") 
                 for layer in self.layers_to_save
@@ -117,4 +119,8 @@ class DkNN_KD_TREE(DkNN):
 class DkNN_LSH(DkNN):
     def __init__(self, k:int, layers_to_save: List[int], database: List[np.array], 
                 layer_dim: int, label_list: List[Any] = None):
-        DkNN.__init__(k, layers_to_save, database, layer_dim, label_list)
+        DkNN.__init__(self, k, layers_to_save, database, layer_dim, label_list)
+
+    def nearest_neighbors(self, hidden_states: Tuple[torch.tensor]) -> np.array:
+        print("***** Running DkNN - Nearest Neighbor Search (One Batch) LSH *****")
+        
