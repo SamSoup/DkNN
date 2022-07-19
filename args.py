@@ -155,11 +155,11 @@ class DataArguments:
             ), "train, eval, test split % must add up to 1"
         if self.DkNN_method is not None:
             assert(self.DkNN_method in {"KD-Tree", "LSH"}), "DkNN method must be one of {KD-Tree, LSH}"
-        if self.read_from_database_path is not None:
+        if self.read_from_database_path:
             assert(
                 os.path.exists(self.save_database_path) and os.path.isdir(self.save_database_path)
             ), f"If reading from database path, then {self.save_database_path} must already exist and be valid directory"
-        if self.read_from_scores_path is not None:
+        if self.read_from_scores_path:
             assert(
                 os.path.exists(self.save_nonconform_scores_path) and os.path.isfile(self.save_nonconform_scores_path)
             ), f"If reading from database path, then {self.save_nonconform_scores_path} must already exist and be a valid path"
