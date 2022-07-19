@@ -17,14 +17,19 @@ from transformers import (
     TrainingArguments
 )
 from typing import Callable, Union, Optional, Dict, List, Tuple, Any
-from utils import save_training_points_representations
+from utils import get_layer_representations
 from DkNN import DkNN_KD_TREE, DkNN_LSH
+from datasets import Dataset
 from torch.utils.data import DataLoader
+from tqdm.auto import tqdm
 import torch.nn.functional as F
 import torch.nn as nn
 import torch
+import numpy as np
 import datasets
 import inspect
+import shutil
+import os
 
 if is_sagemaker_mp_enabled():
     from transformers.trainer_pt_utils import smp_forward_backward, smp_forward_only, smp_gather, smp_nested_concat
@@ -71,50 +76,97 @@ class DkNNTrainer(Trainer):
         Trainer.__init__(self, model, args, data_collator, train_dataset, 
                             eval_dataset, tokenizer, model_init, compute_metrics,
                             callbacks, optimizers, preprocess_logits_for_metrics)
-        if DkNN_method == "KD-Tree":
-            self.DkNNClassifier = DkNN_KD_TREE(num_neighbors, label_list, layers_to_save, self.model.config.hidden_size)
-        elif DkNN_method == "LSH":
-            self.DkNNClassifier = DkNN_LSH(num_neighbors, label_list, layers_to_save, self.model.config.hidden_size)
         torch.cuda.empty_cache() # save memory before iterating through dataset
+        database = self.save_training_points_representations(train_dataset, layers_to_save, save_database_path)
+        if DkNN_method == "KD-Tree":
+            self.DkNNClassifier = DkNN_KD_TREE(num_neighbors, layers_to_save, database, self.model.config.hidden_size, label_list)
+        elif DkNN_method == "LSH":
+            self.DkNNClassifier = DkNN_LSH(num_neighbors, layers_to_save, database, self.model.config.hidden_size, label_list)
+
+    def save_training_points_representations(self, train_dataset: Dataset, layers_to_save: List[int], 
+                                            save_database_path: Optional[str]) -> Dict[int, np.array]:
+        """
+        Following Antigoni Maria Founta et. al. - we make one more pass through the training set
+        and save specified layers' representations in a database (for now simply a DataFrame, may
+        migrate to Spark if necessary) stored in memory
+
+        Args:
+            train_dataloader (DataLoader): the dataset used to train the model wrapped by a dataloader
+            layers_to_save (List[int]): the list of layers to save
+            save_database_path (Optional[str]): directory to save the layer representations, if not None
+        """
+
+        print("***** Running DkNN - Computing Layer Representations *****")
         train_dataloader = DataLoader(self._remove_unused_columns(train_dataset), shuffle=True, 
-                                      batch_size=self.args.train_batch_size, 
-                                      collate_fn=self.data_collator)
-        save_training_points_representations(train_dataloader, layers_to_save, save_database_path, self.model)
+                                        batch_size=self.args.train_batch_size, 
+                                        collate_fn=self.data_collator)
+        progress_bar = tqdm(range(len(train_dataloader)))
+        self.model.eval()
+        # Column metadata: [0-self.layer_dim = representation, label of this example, tag (index in train data)]
+        # total dim when finished = (training size) x (self.layer_dim + 3) per df, a total of len(self.layers_to_save) dataframes
+        # dict { layer_num: pd.Dataframe of layer representations for all training examples}
+        database = { layer: None for layer in layers_to_save }
+        for batch in train_dataloader:
+            inputs = self._prepare_inputs(batch)
+            tags = inputs.pop("tag").cpu().numpy()
+            labels = inputs.pop("labels").cpu().numpy()
+            with torch.no_grad():
+                outputs = self.model(**inputs, output_hidden_states=True)                   # dict: {'loss', 'logits', 'hidden_states'}
+            hidden_states = outputs['hidden_states']
+            # Hidden-states of the model = the initial embedding outputs + the output of each layer                            
+            # filter representations to what we need: (num_layers+1, batch_size, max_seq_len, embedding_dim)
+            for layer in layers_to_save:
+                layer_rep_np = get_layer_representations(hidden_states[layer])
+                layer_rep_np = np.concatenate(
+                    (layer_rep_np, tags.reshape(-1, 1), labels.reshape(-1, 1)), axis=1) # (batch_size, embedding_dim + 2)
+                database[layer] = (np.append(database[layer], layer_rep_np, axis=0) 
+                                   if database[layer] is not None else layer_rep_np)
+            progress_bar.update(1)
+        if save_database_path is not None:
+            print("***** Running DkNN - Saving Layer Representations *****")
+            if os.path.exists(save_database_path) and os.path.isdir(save_database_path):
+                shutil.rmtree(save_database_path)
+            os.makedirs(save_database_path)
+            progress_bar = tqdm(range(len(self.layers_to_save)))
+            for layer in self.layers_to_save:
+                save_file_name = os.path.join(save_database_path, f"layer_{layer}.csv")
+                np.savetxt(save_file_name, database[layer], delimiter=",")
+                progress_bar.update(1)
+        return database
 
     def compute_loss(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]], 
                      return_outputs: bool = False):
         """
         How the loss is computed by Trainer. By default, all models return the loss in the first element.
         We override this function to utilize our custom loss computation
+
+        Args:
+            model (nn.Module): the model for which to compute logits from
+            inputs (Dict[str, Union[torch.Tensor, Any]]): the input batch of example tensors
+            return_outputs (bool, optional): should we return logits along with loss. Defaults to False.
+
+        Returns:
+            Either a tuple of (loss, logits) or just the loss when return_outputs if False
         """
 
         if "labels" in inputs:
             labels = inputs.pop("labels")
         else:
             labels = None
-        # NOTE: hidden_states occpuy a LOT of cuda memory, 
-        # print("Before calling model on inputs")
-        # print(torch.cuda.memory_summary())
-        # input()
+        # NOTE: hidden_states occpuy a LOT of cuda memory, so we need to 
+        # delete them from the GPU when necessary
         outputs = model(**inputs, output_hidden_states=True)
         hidden_states = []
         for state in outputs["hidden_states"]:
             hidden_states.append(state.cpu())
             del state
-        torch.cuda.empty_cache()
-        # print("After calling model on inputs")
-        # print(torch.cuda.memory_summary())
-        # input()        
+        torch.cuda.empty_cache()     
         # Save past state if it exists
-        # TODO: this needs to be fixed and made cleaner later.
         if self.args.past_index >= 0:
             self._past = outputs[self.args.past_index]
         neighbors = self.DkNNClassifier.nearest_neighbors(hidden_states)
         loss, logits = self.DkNNClassifier.compute_loss_and_logits_DkNN(neighbors, labels)
-        outputs = {
-            "loss": loss,
-            "logits": logits
-        }
+        outputs = { "loss": loss, "logits": logits }
         if labels is not None and self.label_smoother is not None:
             loss = self.label_smoother(outputs, labels)
         else:
@@ -122,12 +174,20 @@ class DkNNTrainer(Trainer):
             loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
         return (loss, outputs) if return_outputs else loss
 
-    def _remove_unused_columns(self, dataset: Dataset, description: Optional[str] = None):
+    def _remove_unused_columns(self, dataset: Dataset, description: Optional[str] = None) -> Dataset:
         """
         Trainer's internal function that drops extraenous keys from the dataset,
         I have modified this function to not drop the unique tag associated with each example
         s.t. I can know exactly which example was selected for labeling & to-train on
+
+        Args:
+            dataset (Dataset): the input dataset to strip
+            description (Optional[str], optional): description of the dataset. Defaults to None.
+
+        Returns:
+            Dataset: the cleaned dataset without unexpected arguments for the model to call forward on
         """
+
         if not self.args.remove_unused_columns:
             return dataset
         if self._signature_columns is None:

@@ -15,7 +15,7 @@ class DkNN:
     for the examples in the batch
     """
     def __init__(self, k:int, layers_to_save: List[int], database: Dict[int, np.array], 
-                 layer_dim: int, label_list: List[Any] = None,):
+                 layer_dim: int, label_list: List[Any] = None):
         """
         Initialize basic parameters that all KNN classifiers will need
 
@@ -88,7 +88,7 @@ class DkNN:
 
 class DkNN_KD_TREE(DkNN):
     def __init__(self, k:int, layers_to_save: List[int], database: List[np.array], 
-                 layer_dim: int, label_list: List[Any] = None,):
+                 layer_dim: int, label_list: List[Any] = None):
         DkNN.__init__(k, layers_to_save, database, layer_dim, label_list)
         self.trees = {
             layer: KDTree(self.database[layer][:, :self.layer_dim], metric="l2") 
@@ -116,5 +116,5 @@ class DkNN_KD_TREE(DkNN):
 
 class DkNN_LSH(DkNN):
     def __init__(self, k:int, layers_to_save: List[int], database: List[np.array], 
-                layer_dim: int, label_list: List[Any] = None,):
+                layer_dim: int, label_list: List[Any] = None):
         DkNN.__init__(k, layers_to_save, database, layer_dim, label_list)

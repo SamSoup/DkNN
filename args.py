@@ -137,7 +137,7 @@ class DataArguments:
                 np.isclose(self.train_data_pct + self.eval_data_pct + self.test_data_pct, 1.0)
             ), "train, eval, test split % must add up to 1"
         if self.DkNN_method is not None:
-            assert(self.DkNN_method in set("KD-Tree", "LSH")), "DkNN method must be one of {KD-Tree, LSH}"
+            assert(self.DkNN_method in {"KD-Tree", "LSH"}), "DkNN method must be one of {KD-Tree, LSH}"
 
 @dataclass
 class ModelArguments:
