@@ -112,42 +112,47 @@ class DkNNTrainer(Trainer):
 
         train_dataset = self._remove_unused_columns(train_dataset)
         train_dataloader = DataLoader(train_dataset, shuffle=True, 
-                                      batch_size=self.args.train_batch_sze, 
+                                      batch_size=self.args.train_batch_size, 
                                       collate_fn=self.data_collator)
+        print("***** Running DkNN - Computing Layer Representations *****")
         progress_bar = tqdm(range(len(train_dataloader)))
         self.model.eval()
-        # Column metadata: 0-self.layer_dim = representation, label of this example, tag (index in train data)
+        # Column metadata: [0-self.layer_dim = representation, label of this example, tag (index in train data)]
         # total dim when finished = (training size) x (self.layer_dim + 3) per df, a total of len(self.layers_to_save) dataframes
         # dict { layer_num: pd.Dataframe of layer representations for all training examples}
         self.database = {
-            layer: pd.DataFrame(columns = [*range(self.layer_dim), "label", "tag"]) 
-                for layer in self.layers_to_save
+            layer: None for layer in self.layers_to_save
         }
         for batch in train_dataloader:
-            tags = batch['tag'].cpu()
+            tags = batch['tag'].cpu().numpy()
             del batch['tag']
             inputs = self._prepare_inputs(batch)            
             with torch.no_grad():
-                outputs = self.model(**inputs, output_hidden_states=True)               # dict: {'loss', 'logits', 'hidden_states'}
+                outputs = self.model(**inputs, output_hidden_states=True)                   # dict: {'loss', 'logits', 'hidden_states'}
             hidden_states = outputs['hidden_states']
             # Hidden-states of the model = the initial embedding outputs + the output of each layer                            
             # filter representations to what we need: (num_layers+1, batch_size, max_seq_len, embedding_dim)
             for layer in self.layers_to_save:
-                df = pd.DataFrame(self.get_layer_representations(hidden_states[layer]))
-                df['tag'] = tags
-                df['label'] = train_dataset.select(batch['tag'])['label']
-                self.database[layer] = pd.concat([self.database[layer], df], ignore_index=True, copy=False)
+                layer_rep_np = self.get_layer_representations(hidden_states[layer])
+                layer_rep_np = np.concatenate(
+                    (layer_rep_np, tags.reshape(-1, 1), 
+                     np.array(train_dataset.select(tags)['label']).reshape(-1, 1)), axis=1) # (batch_size, embedding_dim + 2)
+                self.database[layer] = (np.append(self.database[layer], layer_rep_np, axis=0) 
+                                        if self.database[layer] is not None else layer_rep_np)
             progress_bar.update(1)
         if save_database_path is not None:
+            print("***** Running DkNN - Saving Layer Representations *****")
             if os.path.exists(save_database_path) and os.path.isdir(save_database_path):
                 shutil.rmtree(save_database_path)
             os.makedirs(save_database_path)
+            progress_bar = tqdm(range(len(self.layers_to_save)))
             for layer in self.layers_to_save:
                 save_file_name = os.path.join(save_database_path, f"layer_{layer}.csv")
-                self.database[layer].to_csv(save_file_name, header=True, index=False)
+                np.savetxt(save_file_name, self.database[layer], delimiter=",")
+                progress_bar.update(1)
         # construct the pool of trees to search
         self.trees = {
-            layer: KDTree(self.database[layer].iloc[:, :self.layer_dim].to_numpy(), metric="l2") 
+            layer: KDTree(self.database[layer][:, :self.layer_dim], metric="l2") 
                 for layer in self.layers_to_save
         }
 
@@ -169,15 +174,19 @@ class DkNNTrainer(Trainer):
             - cross-polytope vs. hyperplane LSH
         5. KDTree: https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KDTree.html#sklearn.neighbors.KDTree
         """
+        print("***** Running DkNN - Nearest Neighbor Search (One Batch) *****")
         # for each example in the batch, find their total list of neighbors
-        neighbors = np.zeros((self.args.eval_batch_size, len(self.layers_to_save) * self.k))
+        # the batch size may be not equivalent to self.args.eval_batch_size, if the 
+        # number of training examples is *not* an exact multiple of self.args.eval_batch_size
+        # so we use the first layer hidden state's first dimension (presumed batch size)
+        neighbors = np.zeros((hidden_states[0].shape[0], len(self.layers_to_save) * self.k))
         progress_bar = tqdm(range(len(self.layers_to_save)))
         for l, layer in enumerate(self.layers_to_save):
             tree = self.trees[layer]
             dist, batch_indices = tree.query(self.get_layer_representations(hidden_states[layer]), k=self.k) # (batch_size, k)
             # based on idx, look up tag in database per batch of example
             for i, neighbor_indices in enumerate(batch_indices):
-                labels = self.database[layer].iloc[neighbor_indices]["label"]
+                labels = self.database[layer][neighbor_indices][:, -1] # label is the last element of the 2d np array
                 labels_ids = list(map(lambda l: self.label_to_id[l], labels))
                 neighbors[i, l * self.k : (l+1) * self.k] = labels_ids
             progress_bar.update(1)
@@ -206,35 +215,49 @@ class DkNNTrainer(Trainer):
         # TODO: Note that here we elected to do NLL loss and is may NOT be what the
         # model is expecting; but since DkNN does not rely on back-prop (yet), 
         # this is not an issue YET
+        # TODO: infinite loss
         return loss, logits
  
     def compute_loss(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]], 
                      return_outputs: bool = False):
         """
         How the loss is computed by Trainer. By default, all models return the loss in the first element.
-        Subclass and override for custom behavior.
         """
+
         if "labels" in inputs:
             labels = inputs.pop("labels")
         else:
             labels = None
+        # NOTE: hidden_states occpuy a LOT of cuda memory, 
+        # print("Before calling model on inputs")
+        # print(torch.cuda.memory_summary())
+        # input()
         outputs = model(**inputs, output_hidden_states=True)
+        hidden_states = []
+        for state in outputs["hidden_states"]:
+            hidden_states.append(state.cpu())
+            del state
+        torch.cuda.empty_cache()
+        # print("After calling model on inputs")
+        # print(torch.cuda.memory_summary())
+        # input()        
         # Save past state if it exists
         # TODO: this needs to be fixed and made cleaner later.
         if self.args.past_index >= 0:
             self._past = outputs[self.args.past_index]
-        neighbors = self.nearest_neighbors(outputs['hidden_states'])
+        neighbors = self.nearest_neighbors(hidden_states)
         loss, logits = self.compute_loss_and_logits_DkNN(neighbors, labels)
         outputs = {
             "loss": loss,
-            "logits": logits,
-            "hidden_states": outputs['hidden_states']
+            "logits": logits
         }
         if labels is not None and self.label_smoother is not None:
             loss = self.label_smoother(outputs, labels)
         else:
             # We don't use .loss here since the model may return tuples instead of ModelOutput.
             loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
+        # print(torch.cuda.memory_summary())
+        # input()
         return (loss, outputs) if return_outputs else loss
 
     def prediction_step(

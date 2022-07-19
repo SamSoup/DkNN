@@ -327,6 +327,7 @@ def main():
         )
         metrics["eval_samples"] = min(max_eval_samples, len(eval_data))
         trainer.log_metrics("eval", metrics)
+        trainer.save_metrics("eval", metrics)
 
     # Test set Prediction
     if training_args.do_predict:
