@@ -1,77 +1,41 @@
-from inspect import signature
-from typing import List, Dict, Union, Any
-from datasets import Dataset
+from typing import List, Dict, Union, Any, Tuple, Optional
 from sklearn.neighbors import KDTree
-from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
+from utils import get_layer_representations
 import numpy as np
-import pandas as pd
 import torch
-import torch.nn as nn
-
-# TODO: figure out how to use LSh
-# TODO: figure out how to finish DkNN 
+import torch.nn.functional as F
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-class DkNN(nn.Module):
+class DkNN:
     """
-    The Deep K Nearest Neighbor Wrapper that's robust with respect to the underlying
-    model architecture; All that this class expects is that the model must be a
-    Pytorch model (for now), but really it expects a callable with the following
-    interface:
+    Informal interface for Deep K Nearest Neighbors Search, whereby the only functionality
+    required is that given a batch of tensors, return the k nearest neighbor per layer
+    for the examples in the batch
     """
-
-    def __init__(self, model: nn.Module, layers_to_save: List[int], train_data: Dataset, 
-                 per_device_eval_batch_size: int):
-        super().__init__()
-        self.model = model.to(device)
-        self.layer_dim = self.model.config.hidden_size
-        # extract the input signature of this model to know which keyword arguments it expects
-        self.args = signature(self.model.forward).parameters.keys()
-        self.layers_to_save = layers_to_save
-        # self.save_training_points_representations(train_data, per_device_eval_batch_size)
-        # print(self.database)
-        # self.database.to_csv("./data/layer_representation_database.csv", header=True, index=False)
-
-    def save_training_points_representations(self, train_data: Dataset, batch_size: int):
+    def __init__(self, k:int, layers_to_save: List[int], database: Dict[int:np.array], 
+                 layer_dim: int, label_list: List[Any] = None,):
         """
-        Following Antigoni Maria Founta et. al. - we make one more pass through the training set
-        and save specified layers' representations in a database (for now simply a DataFrame, may
-        migrate to Spark if necessary) stored in memory
+        Initialize basic parameters that all KNN classifiers will need
 
         Args:
-            train_data (Dataset): the dataset used to train the model
-            batch_size (int): how many samples to evaluate at once (from cmd line args)
+            k (int): number of nearest neighbors to obtain per sample per layer
+            layers_to_save (List[int]): the list of layers to save
+            database (Dict[int:np.array]): the database of example representations per layer
+            layer_dim (int): the hidden size of each layer
         """
 
-        train_dataloader = DataLoader(train_data, shuffle=True, batch_size=batch_size)
-        progress_bar = tqdm(range(len(train_dataloader)))
-        self.model.eval()
-        # 0-self.layer_dim = representation, layer #, label of this example, tag (index in train data)
-        # total dim when finished = (training size * # of layers) x (self.layer_dim + 3)
-        representations_df = pd.DataFrame(columns = [*range(self.layer_dim), "layer", "label", "tag"])
-        for batch in train_dataloader:
-            inputs = {k: torch.stack(v, dim=1) for k, v in batch.items() if k in self.args}
-            with torch.no_grad():
-                outputs = self.model(**inputs, output_hidden_states=True)               # dict: {'loss', 'logits', 'hidden_states'}
-                # Hidden-states of the model = the initial embedding outputs + the output of each layer
-                hidden_states = outputs['hidden_states']                                # (num_layers+1, batch_size, max_seq_len, embedding_dim)
-                # filter representations to what we need
-                for layer in self.layers_to_save:
-                    # average across all tokens to obtain embedding
-                    rep = torch.mean(hidden_states[layer], dim=1).squeeze().detach()    # (batch_size, embedding_dim)
-                    df = pd.DataFrame(rep.numpy())
-                    df['layer'] = layer
-                    df['tag'] = batch['tag']
-                    df['label'] = train_data.select(batch['tag'])['label']
-                    representations_df = pd.concat([representations_df, df])
-            progress_bar.update(1)
-        self.database = representations_df
-        self.tree = KDTree(representations_df.iloc[:, :self.layer_dim].to_numpy(), metric="l2")
+        self.k = k
+        self.layers_to_save = layers_to_save
+        self.database = database
+        self.layer_dim = layer_dim
+        self.label_list = label_list
+        self.label_to_id = {label: i for i, label in enumerate(label_list)}
 
-    def nearest_neighbors(self, inputs: Dict[str, Union[torch.Tensor, Any]], k=10):
+    def nearest_neighbors(self, hidden_states: Tuple[torch.tensor]) -> np.array:
         """
+        Given a batch of input example tensors, return the k nearest neighbor per layer
         Andoni et. al. https://arxiv.org/pdf/1509.02897.pdf
         Possible algorithms:
         
@@ -87,41 +51,70 @@ class DkNN(nn.Module):
             collision probability for near and far points (depending on some distance r)
             - cross-polytope vs. hyperplane LSH
         5. KDTree: https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KDTree.html#sklearn.neighbors.KDTree
+
+        Args:
+            hidden_states (Tuple[torch.tensor]): (num_layers+1, batch_size, max_seq_len, embedding_dim)
+
+        Returns:
+            np.array: the collection of neighbors (col) per example (row)
         """
-        print(inputs)
-        input()
-        # progress_bar = tqdm(range(len(inputs)))
-        # self.model.eval()
-        # # 0-self.layer_dim = representation, layer #, label of this example, tag (index in train data)
-        # # total dim when finished = (training size * # of layers) x (self.layer_dim + 3)
-        # representations_df = pd.DataFrame(columns = [*range(self.layer_dim), "layer", "label", "tag"])
-        # for batch in train_dataloader:
-        #     inputs = {k: torch.stack(v, dim=1) for k, v in batch.items() if k in self.args}
-        #     with torch.no_grad():
-        #         outputs = self.model(**inputs, output_hidden_states=True)               # dict: {'loss', 'logits', 'hidden_states'}
-        #         # Hidden-states of the model = the initial embedding outputs + the output of each layer
-        #         hidden_states = outputs['hidden_states']                                # (num_layers+1, batch_size, max_seq_len, embedding_dim)
-        #         # filter representations to what we need
-        #         for layer in self.layers_to_save:
-        #             # average across all tokens to obtain embedding
-        #             rep = torch.mean(hidden_states[layer], dim=1).squeeze().detach()    # (batch_size, embedding_dim)
-        #             df = pd.DataFrame(rep.numpy())
-        #             df['layer'] = layer
-        #             df['tag'] = batch['tag']
-        #             df['label'] = train_data.select(batch['tag'])['label']
-        #             representations_df = pd.concat([representations_df, df])
-        #     progress_bar.update(1)
-        # self.database = representations_df
-        # self.tree = KDTree(representations_df.iloc[:, :self.layer_dim].to_numpy(), metric="l2")
+        pass
 
-        # distances and indices of nearest neighbors
-        dist, idx = self.tree.query(inputs, k=k)
+    def compute_loss_and_logits_DkNN(self, neighbors: np.ndarray, labels: Optional[torch.tensor]):
+        """
+        Compute loss and logits using the nearest k neighbors
 
-    def forward(self, inputs, kwargs):
-        print(inputs)
-        print(kwargs)
-        input()
-    
-        
-    def __call__(self, inputs, kwargs):
-        self.forward(inputs, kwargs)
+        Args:
+            neighbors (np.ndarray): an array of (batch_size, num of layers * k)
+            labels: (Optional[torch.tensor]): labels for the batch of input examples, if any
+        """
+        # first find the log-probabilities for each class 
+        probs = np.zeros((neighbors.shape[0], len(self.label_list)))
+        for i, label in enumerate(self.label_list):
+            label_id = self.label_to_id[label]
+            prob = (neighbors == label_id).sum(axis=1) / neighbors.shape[1]
+            probs[:, i] = prob
+        logits = torch.log(torch.from_numpy(probs).to(device)) # (self.args.eval_batch_size, len(self.label_list))
+        if labels is not None:
+            # Negative log likelihood loss for C potential classes
+            loss = F.nll_loss(logits, labels) # torch.tensor(len(self.label_list))
+        else:
+            loss = None
+        # TODO: Note that here we elected to do NLL loss and is may NOT be what the
+        # model is expecting; but since DkNN does not rely on back-prop (yet), 
+        # this is not an issue YET
+        # TODO: infinite loss sometimes...
+        return loss, logits
+
+class DkNN_KD_TREE(DkNN):
+    def __init__(self, k:int, layers_to_save: List[int], database: List[np.array], 
+                 layer_dim: int, label_list: List[Any] = None,):
+        DkNN.__init__(k, layers_to_save, database, layer_dim, label_list)
+        self.trees = {
+            layer: KDTree(self.database[layer][:, :self.layer_dim], metric="l2") 
+                for layer in self.layers_to_save
+        }
+
+    def nearest_neighbors(self, hidden_states: Tuple[torch.tensor]) -> np.array:
+        print("***** Running DkNN - Nearest Neighbor Search (One Batch) KD Tree *****")
+        # for each example in the batch, find their total list of neighbors
+        # the batch size may be not equivalent to self.args.eval_batch_size, if the 
+        # number of training examples is *not* an exact multiple of self.args.eval_batch_size
+        # so we use the first layer hidden state's first dimension (presumed batch size)
+        neighbors = np.zeros((hidden_states[0].shape[0], len(self.layers_to_save) * self.k))
+        progress_bar = tqdm(range(len(self.layers_to_save)))
+        for l, layer in enumerate(self.layers_to_save):
+            tree = self.trees[layer]
+            dist, batch_indices = tree.query(get_layer_representations(hidden_states[layer]), k=self.k) # (batch_size, k)
+            # based on idx, look up tag in database per batch of example
+            for i, neighbor_indices in enumerate(batch_indices):
+                labels = self.database[layer][neighbor_indices][:, -1] # label is the last element of the 2d np array
+                labels_ids = list(map(lambda l: self.label_to_id[l], labels))
+                neighbors[i, l * self.k : (l+1) * self.k] = labels_ids
+            progress_bar.update(1)
+        return neighbors
+
+class DkNN_LSH(DkNN):
+    def __init__(self, k:int, layers_to_save: List[int], database: List[np.array], 
+                layer_dim: int, label_list: List[Any] = None,):
+        DkNN.__init__(k, layers_to_save, database, layer_dim, label_list)

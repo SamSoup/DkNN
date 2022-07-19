@@ -98,9 +98,15 @@ class DataArguments:
             "help": "The name of the column that contains the input sequences to the model."
         }
     )
-    do_DkNN: bool = field (
-        default = False, metadata = {
-            "help": "Should the model be a DkNN model? (ie. use NN for inference)"
+    DkNN_method: Optional[str] = field (
+        default = None, metadata = {
+            "help": "Which DkNN method should we do? If None, then do NOT do DkNN, otherwise may be one of "
+            "{KD-Tree, LSH}"
+        }
+    )
+    K: Optional[int] = field (
+        default = 10, metadata = {
+            "help": "If DkNN_method is not None, how many neighbors to retrieve per layer per example"
         }
     )
     layers_to_save: Optional[List[int]] = field (
@@ -127,7 +133,11 @@ class DataArguments:
                     v.endswith('.csv') or v.endswith('.json')
                 ), f"{k} path must be a file ending in .tsv or .txt"
         if self.do_train_val_test_split:
-            assert(np.isclose(self.train_data_pct + self.eval_data_pct + self.test_data_pct, 1.0))
+            assert(
+                np.isclose(self.train_data_pct + self.eval_data_pct + self.test_data_pct, 1.0)
+            ), "train, eval, test split % must add up to 1"
+        if self.DkNN_method is not None:
+            assert(self.DkNN_method in set("KD-Tree", "LSH")), "DkNN method must be one of {KD-Tree, LSH}"
 
 @dataclass
 class ModelArguments:

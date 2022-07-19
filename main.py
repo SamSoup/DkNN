@@ -307,7 +307,7 @@ def main():
     # Evaluation
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
-        if data_args.do_DkNN:
+        if data_args.DkNN_method is not None:
             trainer = DkNNTrainer(
                 model=model,
                 args=training_args,
@@ -316,9 +316,10 @@ def main():
                 compute_metrics=compute_metrics,
                 tokenizer=tokenizer,
                 data_collator=data_collator,
+                DkNN_method=data_args.DkNN_method,
+                num_neighbors=data_args.K,
                 label_list = label_list,
                 layers_to_save=data_args.layers_to_save,
-                num_neighbors=10,
                 save_database_path=data_args.save_database_path
             )
         metrics = trainer.evaluate(eval_dataset=eval_data)

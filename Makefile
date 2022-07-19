@@ -41,7 +41,8 @@ run-DkNN:
 	--report_to none \
 	--per_device_train_batch_size 64 \
 	--per_device_eval_batch_size 64 \
-	--do_DkNN \
+	--DkNN_method KD-Tree \
+	--K 10 \
 	--layers_to_save 1 2 3 4 5 \
 	--save_database_path ./data/layer_representation_database \
 
