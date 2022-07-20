@@ -175,7 +175,7 @@ class DkNNTrainer(Trainer):
             neighbors = self.DkNNClassifier.nearest_neighbors(hidden_states)
             for j, label in enumerate(labels):
                 label_id = label_to_id[label]
-                nonconform_score = compute_nonconformity_score(neighbors[i, :].reshape(1, -1), label_id)
+                nonconform_score = compute_nonconformity_score(neighbors[j, :].reshape(1, -1), label_id)
                 nonconformity_scores[i*self.args.eval_batch_size + j] = nonconform_score
             progress_bar.update(1)
         if save_nonconform_scores_path is not None:
@@ -214,7 +214,7 @@ class DkNNTrainer(Trainer):
         if self.args.past_index >= 0:
             self._past = outputs[self.args.past_index]
         neighbors = self.DkNNClassifier.nearest_neighbors(hidden_states)
-        loss, logits = self.DkNNClassifier.compute_loss_and_logits_DkNN(neighbors, self.scores,labels)
+        loss, logits = self.DkNNClassifier.compute_loss_and_logits_DkNN(neighbors, labels)
         outputs = { "loss": loss, "logits": logits }
         if labels is not None and self.label_smoother is not None:
             loss = self.label_smoother(outputs, labels)

@@ -84,7 +84,8 @@ class DkNN:
         for i, label in enumerate(self.label_list):
             label_id = self.label_to_id[label]
             nonconform_score = compute_nonconformity_score(neighbors, label_id)
-            empirical_p[:, i] = (self.scores >= nonconform_score).sum() / len(self.scores)
+            for j in neighbors.shape[0]:
+                empirical_p[j, i] = (self.scores >= nonconform_score[j]).sum() / len(self.scores)
         logits = torch.from_numpy(empirical_p).to(device) # (self.args.eval_batch_size, len(self.label_list))
         if labels is not None:
             # Negative log likelihood loss for C potential classes
