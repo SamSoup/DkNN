@@ -175,9 +175,7 @@ class DkNNTrainer(Trainer):
             neighbors = self.DkNNClassifier.nearest_neighbors(hidden_states)
             for j, label in enumerate(labels):
                 label_id = label_to_id[label]
-                # this is the conformity score per class (aka the probability of this example belonging 
-                # to class `label`)
-                nonconform_score = compute_nonconformity_score(neighbors, label_id)
+                nonconform_score = compute_nonconformity_score(neighbors[i, :].reshape(1, -1), label_id)
                 nonconformity_scores[i*self.args.eval_batch_size + j] = nonconform_score
             progress_bar.update(1)
         if save_nonconform_scores_path is not None:
