@@ -107,7 +107,12 @@ def main():
     # See all possible arguments by passing the --help flag to this script.
     # parse the arguments
     parser = HfArgumentParser((DKNNArguments, DataArguments, ModelArguments, TrainingArguments))
-    DKNN_args, data_args, model_args, training_args = parser.parse_args_into_dataclasses()
+    if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
+        # If we pass only one argument to the script and it's the path to a json file,
+        # let's parse it to get our arguments.
+        DKNN_args, data_args, model_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+    else:
+        DKNN_args, data_args, model_args, training_args = parser.parse_args_into_dataclasses()
 
     # logging
     set_up_logging(training_args)

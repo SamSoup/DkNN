@@ -49,5 +49,9 @@ idev -p gpu_a100
 
 Note that it's the responsibility of the user to specify which layers' representations to save for DkNN using the `layers_to_save` argument. 
 
+```
+python3 main.py <path_to_json_configuration_file>
+```
+
 # Documentation
 
