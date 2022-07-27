@@ -1,5 +1,6 @@
 """
-Main script for execution
+Main script for execution, this is the ONLY place where any processing
+of command line arguments occurs
 """
 
 from transformers import (
@@ -15,10 +16,17 @@ from transformers import (
     default_data_collator,
     set_seed
 )
+from typing import Dict
 from data import train_val_test_split, read_data
-from args import DataArguments, ModelArguments
+from args import DKNNArguments, DataArguments, ModelArguments
 from transformers.trainer_utils import get_last_checkpoint
-from datasets import load_dataset, load_metric, Dataset
+from datasets import load_metric, Dataset
+from NearestNeighborLogits import LogProbabilityLogitsFactory, ConformalLogitsFactory
+from NearestNeighborFinder import KDTreeNearestNeighborFactory, LocalitySensitiveHashingNearestNeighborFactory
+from DeepKNearestNeighborClassifier import DeepKNearestNeighborClassifier
+from ComputeAndSaveTrainRepTrainer import ComputeAndSaveTrainRepTrainer
+from ComputeAndSaveConformalScoresTrainer import ComputeAndSaveConformalScoresTrainer
+from DeepKNearestNeighborTrainer import DeepKNearestNeighborTrainer
 import numpy as np
 import os
 import torch
@@ -98,8 +106,8 @@ def set_up_logging(training_args: TrainingArguments):
 def main():
     # See all possible arguments by passing the --help flag to this script.
     # parse the arguments
-    parser = HfArgumentParser((DataArguments, ModelArguments, TrainingArguments))
-    data_args, model_args, training_args = parser.parse_args_into_dataclasses()
+    parser = HfArgumentParser((DKNNArguments, DataArguments, ModelArguments, TrainingArguments))
+    DKNN_args, data_args, model_args, training_args = parser.parse_args_into_dataclasses()
 
     # logging
     set_up_logging(training_args)
@@ -120,7 +128,7 @@ def main():
         )
     else:
         train_data = read_data(data_args.train_file)
-        eval_data = read_data(data_args.eval_file)
+        eval_data = read_data(data_args.validation_file)
         test_data = read_data(data_args.test_file)
 
     # convert data to what models expect
@@ -189,7 +197,6 @@ def main():
     if label_to_id is not None:
         model.config.label2id = label_to_id
         model.config.id2label = {id: label for label, id in config.label2id.items()}
-
     # check max_seq_length compared to model defaults
     if data_args.max_seq_length > tokenizer.model_max_length:
         logger.warning(
@@ -248,15 +255,15 @@ def main():
 
     # Custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
     # predictions and label_ids field) and has to return a dictionary string to float.
-    scores = ["accuracy", "f1", "precision", "recall"]
-    def compute_metrics(p: EvalPrediction):
+    metric_descs = ["accuracy", "f1", "precision", "recall"]
+    def compute_metrics(p: EvalPrediction) -> Dict[str, float]:
         computed_scores = {}
         preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
         preds = np.argmax(preds, axis=1)
         # see datasets.list_metrics() for the complete list
-        for score in scores:
-            metric_func = load_metric(score)
-            computed_scores[score] = metric_func.compute(predictions=preds, references=p.label_ids)[score]
+        for metric_desc in metric_descs:
+            metric_func = load_metric(metric_desc)
+            computed_scores[metric_desc] = metric_func.compute(predictions=preds, references=p.label_ids)[metric_desc]
         return computed_scores
 
     # Data collator will default to DataCollatorWithPadding when the tokenizer is passed to Trainer, so we change it if
@@ -267,8 +274,6 @@ def main():
         data_collator = DataCollatorWithPadding(tokenizer, pad_to_multiple_of=8)
     else:
         data_collator = None
-
-    # torch.cuda.empty_cache()
 
     # Initialize our Trainer
     trainer = Trainer(
@@ -293,6 +298,12 @@ def main():
             checkpoint = training_args.resume_from_checkpoint
         elif last_checkpoint is not None:
             checkpoint = last_checkpoint
+        # TODO: hyper-parameter search
+        # trainer.hyperparameter_search(
+        #     direction="maximize", 
+        #     backend="ray", 
+        #     n_trials=10 # number of trials
+        # )
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
         metrics = train_result.metrics
         max_train_samples = (
@@ -307,12 +318,84 @@ def main():
     # Evaluation
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
+        if DKNN_args.do_DKNN:
+            # first, we compute the representations for all training examples
+            saveTrainRepTrainer = ComputeAndSaveTrainRepTrainer(
+                model=model,
+                args=training_args,
+                data_collator=data_collator,
+                train_dataset=train_data,
+                layers_to_save=DKNN_args.layers_to_save,
+                read_from_database_path=DKNN_args.read_from_database_path,
+                save_database_path=DKNN_args.save_database_path,
+            )
+            database = saveTrainRepTrainer.compute_and_save_training_points_representations()
+            # create the NearestNeighborFinder
+            if DKNN_args.neighbor_method == "KD-Tree":
+                nearestNeighborFactory = KDTreeNearestNeighborFactory(
+                    K=DKNN_args.K, 
+                    layers_to_save=DKNN_args.layers_to_save, 
+                    database=database, 
+                    layer_dim=model.config.hidden_size
+                )
+            elif DKNN_args.neighbor_method == "LSH":
+                nearestNeighborFactory = LocalitySensitiveHashingNearestNeighborFactory(
+                    K=DKNN_args.K, 
+                    layers_to_save=DKNN_args.layers_to_save, 
+                    database=database, 
+                    layer_dim=model.config.hidden_size
+                )
+            else:
+                raise ValueError("Illegal Nearest Neighbor Finder method")
+            nearestNeighborFinderFunction = nearestNeighborFactory.createNearestNeighborFunction()
+
+            # create the NearestNeighborLogit Function
+            if DKNN_args.prediction_method == "normal":
+                logitsFactory = LogProbabilityLogitsFactory(label_list)
+            elif DKNN_args.prediction_method == "conformal":
+                # now, compute the conformal socres first
+                computeAndSaveConformalScoresTrainer = ComputeAndSaveConformalScoresTrainer(
+                    model=model,
+                    args=training_args,
+                    caliberation_dataset=eval_data,
+                    data_collator=data_collator,
+                    nearestNeighborFunction=nearestNeighborFinderFunction,
+                    read_from_scores_path=DKNN_args.read_from_scores_path,
+                    save_nonconform_scores_path=DKNN_args.save_nonconform_scores_path
+                )
+                scores = computeAndSaveConformalScoresTrainer.compute_and_save_nonconformity_scores()
+                logitsFactory = ConformalLogitsFactory(label_list, scores)
+            else:
+                raise ValueError("Illegal Nearest Neighbor Prediction method")
+            nearestNeighborLogitFunction = logitsFactory.createLogitsFunction()
+            
+            # TODO: consider different loss functions?
+
+            # finally, create the complete Nearest Neighbor Classifier
+            classifier = DeepKNearestNeighborClassifier(
+                NearestNeighborFunction=nearestNeighborFinderFunction,
+                LogitsFunction=nearestNeighborLogitFunction,
+                LossFunction=torch.nn.functional.nll_loss
+            )
+
+            # create custom trainer that utilizes our function
+            trainer = DeepKNearestNeighborTrainer(
+                model=model,
+                args=training_args,
+                train_dataset=train_data,
+                eval_dataset=eval_data if training_args.do_eval else None,
+                data_collator=data_collator,
+                tokenizer=tokenizer,
+                compute_metrics=compute_metrics,
+                classifier=classifier
+            )
         metrics = trainer.evaluate(eval_dataset=eval_data)
         max_eval_samples = (
             data_args.max_eval_samples if data_args.max_eval_samples is not None else len(eval_data)
         )
         metrics["eval_samples"] = min(max_eval_samples, len(eval_data))
         trainer.log_metrics("eval", metrics)
+        trainer.save_metrics("eval", metrics)
 
     # Test set Prediction
     if training_args.do_predict:

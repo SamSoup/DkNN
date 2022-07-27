@@ -19,21 +19,23 @@ The dataset covers 80 thousand tweets categorized under hateful, abusive, normal
 
 # Baseline
 
-BERT
+DistillBert
 
-BART
 
 # Installation
 
 ```
 conda create --name DkNN python=3.9
 conda activate DkNN
+pip3 install --upgrade pip
 pip3 install git+https://github.com/huggingface/transformers
 pip3 install datasets
 pip3 install -U scikit-learn
 conda install pandas
 pip3 install --user torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113 --no-cache-dir
 pip3 install --user filelock packaging>=20.0 pyyaml>=5.1 scipy>=1.3.2 packaging pandas --no-cache-dir
+conda install -n DkNN ipykernel --update-deps --force-reinstall
+pip3 install "ray[tune]"
 ```
 
 On TACC: add these flags to pip install
@@ -42,3 +44,10 @@ On TACC: add these flags to pip install
 --no-cache-dir
 
 idev -p gpu_a100
+
+# Execution
+
+Note that it's the responsibility of the user to specify which layers' representations to save for DkNN using the `layers_to_save` argument. 
+
+# Documentation
+

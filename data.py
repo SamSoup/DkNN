@@ -23,7 +23,7 @@ def read_data(file: str) -> pd.DataFrame:
     else:
         # let pandas auto detect the input separator
         data = pd.read_csv(file, sep=None, engine="python")
-    
+
     return data
 
 def train_val_test_split(data_file: str, train_pct: float, eval_pct: float, 

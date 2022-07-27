@@ -5,8 +5,92 @@ See python3 main.py -help for all possible arugments
 """
 
 from dataclasses import dataclass, field
-from typing import Optional
+from socket import AF_NETROM
+from typing import Optional, List
 import numpy as np
+import os
+
+@dataclass
+class DKNNArguments:
+    """
+    Arguments pertaining specifically for Deek K Nearest Neighbor Configurations
+    """
+
+    do_DKNN: Optional[bool] = field (
+        default = False, metadata = {
+            "help": "Should we do Deep K Nearest Neighbor Inference?"
+        }
+    )
+    neighbor_method: Optional[str] = field (
+        default = "KD-Tree", metadata = {
+            "help": "Which Nearest Neighbor method should we do; one of {KD-Tree, LSH}"
+        }
+    )
+    prediction_method: str = field (
+        default = "normal", metadata={
+            "help": "Specify which method to use for predictions, if `normal` then do argmax over "
+            "log probabilities, if `conformal` do conformal predictions based on p-values over"
+            "scores computed over caliberation set (DkNN). One of {normal, conformal} for now."
+        }
+    )
+    K: Optional[int] = field (
+        default = 10, metadata = {
+            "help": "If DkNN_method is not None, how many neighbors to retrieve per layer per example"
+        }
+    )
+    layers_to_save: Optional[List[int]] = field (
+        default_factory=list, metadata = {
+            "help": "A list of layers to save its representation for (DkNN only) in python list format;"
+            "by default no layers are saved."
+        }
+    )
+    read_from_database_path: bool = field (
+        default=False, metadata = {
+            "help": "If true, read from `save_database_path` instead of writing to it."
+        }
+    )
+    save_database_path: Optional[str] = field (
+        default=None, metadata = {
+            "help": "Directory path to save the training data representation, by default means "
+            "overwriting what's in the directory"
+        }
+    )
+    read_from_scores_path: bool = field (
+        default=False, metadata = {
+            "help": "If true, read from `save_nonconform_scores_path` instead of writing to it."
+        }
+    )
+    save_nonconform_scores_path: Optional[str] = field (
+        default=None, metadata = {
+            "help": "Path to save the non-conformity scores for the validation data, must end in .csv"
+        }
+    )
+    
+    def __post_init__(self):
+        self.neighbor_methods = {"KD-Tree", "LSH"}
+        self.prediction_methods = {"normal", "conformal"}
+        if self.neighbor_method is not None:
+            assert(
+                self.neighbor_method in self.neighbor_methods
+            ), f"Nearest Neighbor method be one of {self.neighbor_methods}"
+        assert(
+            self.prediction_method in self.prediction_methods
+            ), f"Prediction method must be one of {self.prediction_methods}"
+        if self.read_from_database_path:
+            assert(
+                os.path.exists(self.save_database_path) and os.path.isdir(self.save_database_path)
+            ), f"If reading from database path, then {self.save_database_path} "\
+                "must already exist and be a valid directory"
+        if self.read_from_scores_path:
+            assert(
+                os.path.exists(self.save_nonconform_scores_path) and \
+                os.path.isfile(self.save_nonconform_scores_path)
+            ), f"If reading from database path, then {self.save_nonconform_scores_path}"\
+                "must already exist and be a valid path"
+        if self.save_nonconform_scores_path is not None:
+            assert(
+                self.save_nonconform_scores_path.endswith(".csv")
+            ), f"{self.save_nonconform_scores_path} must end in a .csv"
 
 @dataclass
 class DataArguments:
@@ -15,6 +99,7 @@ class DataArguments:
     Using `HfArgumentParser` we can turn this class into argparse arguments to be able to specify 
     them on the command line. Structure follows from run_glue.py from Transformers.
     """
+
     max_seq_length: int = field(
         default=1024,
         metadata={
@@ -26,7 +111,7 @@ class DataArguments:
         default=True,
         metadata={
             "help": "Whether to pad all samples to `max_seq_length`. "
-            "If False, will pad the samples dynamically when batching to the maximum length in the batch."
+            "If False, will pad the samples dynamically when batching to the maximum length."
         },
     )
     max_train_samples: Optional[int] = field(
@@ -90,7 +175,7 @@ class DataArguments:
     )
     shuffle_seed : Optional[int] = field (
         default = 42, metadata = {
-            "help": "The random seed for shuffling rows for train-val-test split and other data related operations."
+            "help": "The random seed for shuffling rows during train-val-test split."
         }
     )
     input_key: str = field (
@@ -111,7 +196,9 @@ class DataArguments:
                     v.endswith('.csv') or v.endswith('.json')
                 ), f"{k} path must be a file ending in .tsv or .txt"
         if self.do_train_val_test_split:
-            assert(np.isclose(self.train_data_pct + self.eval_data_pct + self.test_data_pct, 1.0))
+            assert(
+                np.isclose(self.train_data_pct + self.eval_data_pct + self.test_data_pct, 1.0)
+            ), "train, eval, test split % must add up to 1"
 
 @dataclass
 class ModelArguments:
@@ -144,7 +231,7 @@ class ModelArguments:
     use_auth_token: bool = field(
         default=False,
         metadata={
-            "help": "Will use the token generated when running `transformers-cli login` (necessary to use this script "
-            "with private models)."
+            "help": "Will use the token generated when running `transformers-cli login` "
+            "(necessary to use this script with private models)."
         },
     )
