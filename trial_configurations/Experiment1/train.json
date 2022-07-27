@@ -1,11 +1,11 @@
 {
 	"model_name_or_path": "distilbert-base-uncased",
-    "train_file": "./data/train_data.csv",
-	"validation_file": "./data/eval_data.csv",
-	"test_file": "./data/test_data.csv",
+    "train_file": "./data/twitter-hate/train_data.csv",
+	"validation_file": "./data/twitter-hate/eval_data.csv",
+	"test_file": "./data/twitter-hate/test_data.csv",
 	"seed": 42,
     "shuffle_seed": 42, 
-	"output_dir": "./output/distilbert-base-uncased-DkNN-2",
+	"output_dir": "./output/twitter-hate/distilbert-base-uncased-1",
 	"do_train_val_test_split": false,  
 	"overwrite_output_dir": true,
 	"do_train": true, 
@@ -20,5 +20,3 @@
 	"per_device_eval_batch_size": 64,
 	"do_DKNN": false
 }
-
-
