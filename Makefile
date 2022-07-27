@@ -32,7 +32,7 @@ run-DkNN:
 	--test_file ./data/test_data.csv \
 	--seed 42 \
 	--shuffle_seed 42 \
-	--output_dir ./output/distilbert-base-uncased-DkNN-1 \
+	--output_dir ./output/distilbert-base-uncased-DkNN-2 \
 	--do_train_val_test_split False \
 	--overwrite_output_dir \
 	--do_train False \
@@ -43,13 +43,15 @@ run-DkNN:
 	--report_to none \
 	--per_device_train_batch_size 64 \
 	--per_device_eval_batch_size 64 \
-	--DkNN_method KD-Tree \
+	--do_DKNN True \
+	--neighbor_method KD-Tree \
+	--prediction_method conformal \
 	--K 10 \
 	--layers_to_save 1 2 3 4 5 \
-	--read_from_database_path False \
-	--save_database_path ./data/layer_representation_database \
-	--read_from_scores_path False \
-	--save_nonconform_scores_path ./data/non_conformity_scores.csv
+	--read_from_database_path True \
+	--save_database_path ./data/layer_representation_database_test \
+	--read_from_scores_path True \
+	--save_nonconform_scores_path ./data/non_conformity_scores_test.csv
 
 clean:
 	rm -f *.e*
