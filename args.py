@@ -65,7 +65,18 @@ class DKNNArguments:
             "help": "Path to save the non-conformity scores for the validation data, must end in .csv"
         }
     )
-    
+    leaf_size: Optional[int] = field (
+        default = 40, metadata = {
+            "help": "If neighbor_method is KD-Tree, then this is the number of points at which to switch"
+            "to brute force nearest neighbors (hyper-parameter)"
+        }
+    )
+    num_hash_funct: Optional[int] = field (
+        default = 16, metadata = {
+            "help": "If neighbor_method is KSH, then this is the number of random hash functions to use"
+        }
+    )
+
     def __post_init__(self):
         self.neighbor_methods = {"KD-Tree", "LSH"}
         self.prediction_methods = {"normal", "conformal"}

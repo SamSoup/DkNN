@@ -23,7 +23,7 @@ class LogProbabilityLogits(AbstractLogits):
             label_id = self.label_to_id[label]
             # probability of each class = # of examples in each class / total neighbors
             probs[:, i] = (neighbors == label_id).sum(axis=1) / neighbors.shape[1]
-        logits = np.log(probs) 
+        logits = np.log(probs) # NOTE: may give -Inf when probs = 0
         return logits # (self.args.eval_batch_size, len(self.label_list))
 
 class ConformalLogits(AbstractLogits):

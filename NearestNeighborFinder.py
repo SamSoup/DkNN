@@ -1,12 +1,16 @@
+from collections import defaultdict
 from typing import List, Dict, Tuple
 from sklearn.neighbors import KDTree
+from sklearn.metrics.pairwise import pairwise_distances
 from tqdm.auto import tqdm
-from utils import get_layer_representations
+from itertools import combinations
+from utils import get_layer_representations, convert_boolean_array_to_str
 import numpy as np
 import torch
 import abc
 
 # TODO: add Doc-string and comments where need be
+import time
 
 class AbstractNearestNeighbor(abc.ABC):
     """   
@@ -14,7 +18,7 @@ class AbstractNearestNeighbor(abc.ABC):
     required is that given a batch of tensors, return the k nearest neighbor per 
     layer for the examples in the batch
     """
-    def __init__(self, K:int, layers_to_save: List[int], database: Dict[int, np.array], layer_dim: int):
+    def __init__(self, K:int, layers_to_save: List[int], database: Dict[int, np.ndarray], layer_dim: int):
         """
         Initialize basic parameters that all KNN finders will need
 
@@ -46,10 +50,12 @@ class AbstractNearestNeighbor(abc.ABC):
         raise NotImplementedError
     
 class KDTreeNearestNeighbor(AbstractNearestNeighbor):
-    def __init__(self, K:int, layers_to_save: List[int], database: Dict[int, np.array], layer_dim: int):
+    def __init__(self, K:int, layers_to_save: List[int], database: Dict[int, np.ndarray], 
+                 layer_dim: int, leaf_size: int):
+        print("***** Running DkNN - Initializing KD Trees *****")
         super().__init__(K, layers_to_save, database, layer_dim)
         self.trees = {
-            layer: KDTree(self.database[layer][:, :self.layer_dim], metric="l2") 
+            layer: KDTree(self.database[layer][:, :self.layer_dim], leaf_size=leaf_size, metric="l2") 
                 for layer in self.layers_to_save
         }
 
@@ -72,18 +78,82 @@ class KDTreeNearestNeighbor(AbstractNearestNeighbor):
         return neighbors
 
 class LocalitySensitiveHashingNearestNeighbor(AbstractNearestNeighbor):
-    def __init__(self, K:int, layers_to_save: List[int], database: Dict[int, np.array], layer_dim: int):
+    def __init__(self, K:int, layers_to_save: List[int], database: Dict[int, np.ndarray], 
+                 layer_dim: int, num_hash_funct: int):
+        print("***** Running DkNN - Initializing LSH Tables *****")
         super().__init__(K, layers_to_save, database, layer_dim)
-        # TODO
+        # start = time.time()
+        self.num_hash_funct = num_hash_funct
+        self.hash_vectors = np.random.randn(layer_dim, num_hash_funct)
+        self.powers_of_two = np.power(2, np.arange(num_hash_funct - 1, -1, step=-1, dtype=object))
+        # pre-computed powers of two for fast binary to integer conversion
+        # encode the database and construct the lsh table
+        self.table = defaultdict(lambda: defaultdict(list)) # layer -> {bin_index: example tags}
+        for layer in layers_to_save:
+            bin_indices_bits = database[layer][:, :layer_dim].dot(self.hash_vectors) >= 0 # (len(training_set), num_hash_funct)
+            bin_indices = bin_indices_bits.dot(self.powers_of_two) # (len(training_set))
+            # bin_indices = convert_boolean_array_to_str(bin_indices_bits) # [len(training_set)]
+            for i, bin_index in enumerate(bin_indices):
+                self.table[layer][bin_index].append(
+                    int(database[layer][i, -2]) # tag of this example
+                )
+            print(f"Table for layer {layer} has {len(self.table[layer].keys())} bins")
+        # end = time.time()
+        # print(f"Initializing tables took {end - start}")
 
-    def nearest_neighbors(self, hidden_states: Tuple[torch.tensor]) -> np.array:
-        print("***** Running DkNN - Nearest Neighbor Search (One Batch) LSH *****")
+    def find_candidate_sets(self, hidden_state: torch.tensor, layer: int) -> List[List[int]]:
+        # start = time.time()
+        candidate_sets = [[] for _ in range(hidden_state.shape[0])]
+        bin_index_bits = hidden_state.dot(self.hash_vectors) >= 0 # (batch_size, num_hash_funct) 
+
+        # search nearby bins and collect candidates
+        min_num_of_neighbors_in_batch = 0
+        search_radius = 0
+        while min_num_of_neighbors_in_batch < self.K:
+            # print(f"Minimum is {min_num_of_neighbors_in_batch}, search radius is {search_radius}")
+            for different_bits in combinations(range(self.num_hash_funct), search_radius):
+                # flip the bits (n_1, n_2, ..., n_r) of the query bin to produce a new bit vector
+                index = list(different_bits)
+                alternate_bits = bin_index_bits.copy()
+                alternate_bits[:, index] = np.logical_not(alternate_bits[:, index])
+                # keys = convert_boolean_array_to_str(alternate_bits)
+                keys = alternate_bits.dot(self.powers_of_two)
+                for i, key in enumerate(keys):
+                    # key = int(key, 2)
+                    if key in self.table[layer]:
+                        candidate_sets[i].extend(self.table[layer][key])
+            min_num_of_neighbors_in_batch = min(map(len, candidate_sets))
+            search_radius += 1
+        # end = time.time()
+        # print(f"A batch of nearest neighbor candidates took {end - start}")
+        return candidate_sets
+
+    def nearest_neighbors(self, hidden_states: Tuple[torch.tensor]) -> np.ndarray:
+        batch_size = hidden_states[0].shape[0]
+        neighbors = np.zeros((batch_size, len(self.layers_to_save) * self.K))
+        for l, layer in enumerate(self.layers_to_save):
+            hidden_state_batch = get_layer_representations(hidden_states[layer]).cpu().detach().numpy()
+            candidate_sets = self.find_candidate_sets(hidden_state_batch, layer)
+            for candidate_set in candidate_sets:
+                labels = self.database[layer][candidate_set][:,-1]
+                distances_batch = pairwise_distances( # O(n^2) operation
+                    hidden_state_batch,
+                    self.database[layer][candidate_set][:, :self.layer_dim], 
+                    metric='cosine',
+                    n_jobs=64
+                ) # (batch_size, len(candidate_sets[i]))
+                for i, distances in enumerate(distances_batch):
+                    indices = np.argsort(distances)
+                    distances_batch[i, :] = distances_batch[i, :][indices]
+                    labels_top_k = labels[indices][:self.K]
+                    neighbors[i, l * self.K : (l+1) * self.K] = labels_top_k
+        return neighbors
 
 class AbstractNearestNeighborFactory(abc.ABC):
     """
     Abstract Factory to produce different Nearest Neighbor getters
     """
-    def __init__(self, K:int, layers_to_save: List[int], database: Dict[int, np.array], layer_dim: int):
+    def __init__(self, K:int, layers_to_save: List[int], database: Dict[int, np.ndarray], layer_dim: int):
         self.K = K
         self.layers_to_save = layers_to_save
         self.database = database
@@ -94,19 +164,31 @@ class AbstractNearestNeighborFactory(abc.ABC):
         raise NotImplementedError
 
 class KDTreeNearestNeighborFactory(AbstractNearestNeighborFactory):
+    def __init__(self, K:int, layers_to_save: List[int], database: Dict[int, np.ndarray], 
+                 layer_dim: int, leaf_size: int):
+        super().__init__(K, layers_to_save, database, layer_dim)
+        self.leaf_size = leaf_size
+
     def createNearestNeighborFunction(self) -> AbstractNearestNeighbor:
         return KDTreeNearestNeighbor(
             K=self.K, 
             layers_to_save=self.layers_to_save, 
             database=self.database, 
-            layer_dim=self.layer_dim
+            layer_dim=self.layer_dim,
+            leaf_size=self.leaf_size
         )
 
 class LocalitySensitiveHashingNearestNeighborFactory(AbstractNearestNeighborFactory):
+    def __init__(self, K:int, layers_to_save: List[int], database: Dict[int, np.ndarray], 
+                 layer_dim: int, num_hash_funct: int):
+        super().__init__(K, layers_to_save, database, layer_dim)
+        self.num_hash_funct = num_hash_funct
+
     def createNearestNeighborFunction(self) -> AbstractNearestNeighbor:
         return LocalitySensitiveHashingNearestNeighbor(            
             K=self.K, 
             layers_to_save=self.layers_to_save, 
             database=self.database, 
-            layer_dim=self.layer_dim
+            layer_dim=self.layer_dim,
+            num_hash_funct=self.num_hash_funct
         )

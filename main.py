@@ -121,6 +121,7 @@ def main():
     set_seed(training_args.seed)
     torch.manual_seed(training_args.seed)
     random.seed(training_args.seed)
+    np.random.seed(training_args.seed)
 
     # read in data
     # See more about loading any type of standard or custom dataset at
@@ -341,14 +342,16 @@ def main():
                     K=DKNN_args.K, 
                     layers_to_save=DKNN_args.layers_to_save, 
                     database=database, 
-                    layer_dim=model.config.hidden_size
+                    layer_dim=model.config.hidden_size,
+                    leaf_size=DKNN_args.leaf_size
                 )
             elif DKNN_args.neighbor_method == "LSH":
                 nearestNeighborFactory = LocalitySensitiveHashingNearestNeighborFactory(
                     K=DKNN_args.K, 
                     layers_to_save=DKNN_args.layers_to_save, 
                     database=database, 
-                    layer_dim=model.config.hidden_size
+                    layer_dim=model.config.hidden_size,
+                    num_hash_funct=DKNN_args.num_hash_funct
                 )
             else:
                 raise ValueError("Illegal Nearest Neighbor Finder method")
