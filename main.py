@@ -21,7 +21,7 @@ from typing import Dict
 from data import train_val_test_split, read_data
 from args import DKNNArguments, DataArguments, ModelArguments
 from transformers.trainer_utils import get_last_checkpoint
-from datasets import load_metric, Dataset
+from datasets import load_metric, Dataset, load_dataset
 from NearestNeighborLogits import LogProbabilityLogitsFactory, ConformalLogitsFactory
 from NearestNeighborFinder import KDTreeNearestNeighborFactory, LocalitySensitiveHashingNearestNeighborFactory
 from DeepKNearestNeighborClassifier import DeepKNearestNeighborClassifier
@@ -129,9 +129,11 @@ def main():
     # read in data
     # See more about loading any type of standard or custom dataset at
     # https://huggingface.co/docs/datasets/loading_datasets.html.
+    # split dataset into train, val, test
     if data_args.do_train_val_test_split:
+        data = read_data(data_args.train_file)
         train_data, eval_data, test_data = train_val_test_split(
-            data_args.train_file, data_args.train_data_pct,
+            train_data, data_args.train_data_pct,
             data_args.eval_data_pct, data_args.test_data_pct,
             data_args.shuffle_seed
         )
@@ -285,6 +287,7 @@ def main():
         data_collator = None
     
     # Additional: add early stopping callback if specified
+    callbacks = None
     if data_args.do_early_stopping:
         callbacks = [EarlyStoppingCallback(early_stopping_patience=2)]
 
@@ -433,6 +436,9 @@ def main():
         # Removing the `label` columns because it contains -1 and Trainer won't like that.
         test_data = test_data.remove_columns("label")
         predictions = trainer.predict(test_data, metric_key_prefix="predict").predictions
+        if len(predictions) > 1:
+            # assume the first thing in the tuple is predictions
+            predictions = predictions[0]
         predictions = np.argmax(predictions, axis=1)
 
         output_predict_file = os.path.join(training_args.output_dir, f"predict_results.txt")

@@ -25,7 +25,7 @@ def read_data(file: str) -> pd.DataFrame:
 
     return data
 
-def train_val_test_split(data_file: str, train_pct: float, eval_pct: float, 
+def train_val_test_split(data: pd.DataFrame, train_pct: float, eval_pct: float, 
     test_pct : float, seed: int) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Here we perform train-validation-test split by calling the `train_test_split` 
@@ -44,7 +44,6 @@ def train_val_test_split(data_file: str, train_pct: float, eval_pct: float,
         Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: the train, eval, and test split
     """
 
-    data = read_data(data_file)
     eval_and_test_pct = eval_pct + test_pct
     data_train, data_eval_and_test = train_test_split(data, 
         train_size=train_pct, random_state=seed, shuffle=True, 
@@ -52,5 +51,5 @@ def train_val_test_split(data_file: str, train_pct: float, eval_pct: float,
     data_eval, data_test = train_test_split(data_eval_and_test, 
         test_size=test_pct / eval_and_test_pct, random_state=seed, shuffle=True, 
         stratify=data_eval_and_test["label"])
-    
+
     return data_train, data_eval, data_test

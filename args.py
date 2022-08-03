@@ -110,7 +110,6 @@ class DataArguments:
     Using `HfArgumentParser` we can turn this class into argparse arguments to be able to specify 
     them on the command line. Structure follows from run_glue.py from Transformers.
     """
-
     max_seq_length: int = field(
         default=1024,
         metadata={
