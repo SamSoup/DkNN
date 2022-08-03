@@ -9,6 +9,7 @@ from transformers import (
     AutoTokenizer,
     DataCollatorWithPadding,
     EvalPrediction,
+    EarlyStoppingCallback,
     HfArgumentParser,
     PretrainedConfig,
     TrainingArguments,
@@ -27,7 +28,9 @@ from DeepKNearestNeighborClassifier import DeepKNearestNeighborClassifier
 from ComputeAndSaveTrainRepTrainer import ComputeAndSaveTrainRepTrainer
 from ComputeAndSaveConformalScoresTrainer import ComputeAndSaveConformalScoresTrainer
 from DeepKNearestNeighborTrainer import DeepKNearestNeighborTrainer
+from CustomLossTrainer import CustomLossTrainer
 import numpy as np
+import torch.nn as nn
 import os
 import torch
 import logging
@@ -280,9 +283,15 @@ def main():
         data_collator = DataCollatorWithPadding(tokenizer, pad_to_multiple_of=8)
     else:
         data_collator = None
+    
+    # Additional: add early stopping callback if specified
+    if data_args.do_early_stopping:
+        callbacks = [EarlyStoppingCallback(early_stopping_patience=2)]
 
     # Initialize our Trainer
-    trainer = Trainer(
+    if data_args.do_weighted_cross_entropy_loss:
+        weights = torch.tensor(data_args.weights_per_class).to(device)
+        trainer = CustomLossTrainer(
         model=model,
         args=training_args,
         train_dataset=train_data if training_args.do_train else None,
@@ -290,7 +299,20 @@ def main():
         compute_metrics=compute_metrics,
         tokenizer=tokenizer,
         data_collator=data_collator,
+        callbacks=callbacks,
+        loss_fct=nn.CrossEntropyLoss(weight=weights)
     )
+    else:
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=train_data if training_args.do_train else None,
+            eval_dataset=eval_data if training_args.do_eval else None,
+            compute_metrics=compute_metrics,
+            tokenizer=tokenizer,
+            data_collator=data_collator,
+            callbacks=callbacks
+        )
 
     # detect last checkpt
     last_checkpoint = detect_last_checkpoint(training_args.output_dir, training_args.do_train, 

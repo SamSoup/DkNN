@@ -194,6 +194,29 @@ class DataArguments:
             "help": "The name of the column that contains the input sequences to the model."
         }
     )
+    do_early_stopping: bool = field (
+        default = True, metadata = {
+            "help": "Should we do early stopping? If so, then load_best_model_at_end must be true"
+            "evaluation_strategy must be \"steps\", and that metric_for_best_model must be specified"
+        }
+    )
+    early_stopping_patience: Optional[int] = field (
+        default = 2, metadata = {
+            "help": "If we are using early stopping callback, then this is the input to "
+            "transformers.EarlyStoppingCallback"
+        }
+    )
+    do_weighted_cross_entropy_loss: bool = field (
+        default = False, metadata = {
+            "help": "Should we use weighted cross entropy loss? If true, then the weights"
+            "for each class must be speciifed in weights_per_class"
+        }
+    )
+    weights_per_class: Optional[List[float]] = field (
+        default_factory=list, metadata = {
+            "help": "The weights per class for use in computing the weighted loss"
+        }
+    )
 
     def __post_init__(self):
         to_check = {

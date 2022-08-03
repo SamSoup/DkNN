@@ -26,5 +26,5 @@
 	"save_database_path": "./data/twitter-hate/distilbert-base-uncased-1/layer_representation_database",
 	"read_from_scores_path": true,
 	"save_nonconform_scores_path": "./data/twitter-hate/distilbert-base-uncased-1/non_conformity_scores.csv",
-    "num_hash_funct": 64
+    "num_hash_funct": 16
 }

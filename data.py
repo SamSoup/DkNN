@@ -2,8 +2,7 @@
 Utility functions for data processing
 """
 
-from cgi import test
-from typing import Tuple, List
+from typing import Tuple
 from sklearn.model_selection import train_test_split
 import pandas as pd
 
