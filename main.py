@@ -217,7 +217,7 @@ def main():
     max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
 
     def preprocess_function(examples):
-        # Tokenize the texts
+        # Tokenize the texts - input only
         args = ((examples[data_args.input_key],))
         result = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
 
@@ -230,19 +230,19 @@ def main():
             preprocess_function,
             batched=True,
             load_from_cache_file=not data_args.overwrite_cache,
-            desc="Running tokenizer on dataset",
+            desc="Running tokenizer on training dataset",
         )
         eval_data = eval_data.map(
             preprocess_function,
             batched=True,
             load_from_cache_file=not data_args.overwrite_cache,
-            desc="Running tokenizer on dataset",
+            desc="Running tokenizer on eval dataset",
         )
         test_data = test_data.map(
             preprocess_function,
             batched=True,
             load_from_cache_file=not data_args.overwrite_cache,
-            desc="Running tokenizer on dataset",
+            desc="Running tokenizer on test dataset",
         )
 
     # make sure that we trunk examples, if specified
@@ -256,8 +256,10 @@ def main():
             data = data.select(range(min(len(train_data), sample_limit)))
 
     # add a unique tag for the training examples - might be useful for retrieval later
-    new_column = list(range(train_data.num_rows))
-    train_data = train_data.add_column("tag", new_column)
+    train_data = train_data.add_column("tag", list(range(train_data.num_rows)))
+    if DKNN_args.save_logits or DKNN_args.output_and_save_neighbor_ids:
+        eval_data = eval_data.add_column("tag", list(range(eval_data.num_rows)))
+        test_data = test_data.add_column("tag", list(range(test_data.num_rows)))
 
     # Log a few random samples from the training set:
     if training_args.do_train:
@@ -275,6 +277,10 @@ def main():
         for metric_desc in metric_descs:
             metric_func = load_metric(metric_desc)
             computed_scores[metric_desc] = metric_func.compute(predictions=preds, references=p.label_ids)[metric_desc]
+        # get per-class f1 too
+        f1_scores = load_metric("f1").compute(predictions=preds, references=p.label_ids, average=None)["f1"]
+        computed_scores["f1-negative"] = f1_scores[0]
+        computed_scores["f1-positive"] = f1_scores[1]
         return computed_scores
 
     # Data collator will default to DataCollatorWithPadding when the tokenizer is passed to Trainer, so we change it if
@@ -289,7 +295,7 @@ def main():
     # Additional: add early stopping callback if specified
     callbacks = None
     if data_args.do_early_stopping:
-        callbacks = [EarlyStoppingCallback(early_stopping_patience=2)]
+        callbacks = [EarlyStoppingCallback(early_stopping_patience=data_args.early_stopping_patience)]
 
     # Initialize our Trainer
     if data_args.do_weighted_cross_entropy_loss:
@@ -314,7 +320,7 @@ def main():
             compute_metrics=compute_metrics,
             tokenizer=tokenizer,
             data_collator=data_collator,
-            callbacks=callbacks
+            callbacks=callbacks,
         )
 
     # detect last checkpt
@@ -346,82 +352,85 @@ def main():
         trainer.save_metrics("train", metrics)
         trainer.save_state()
 
+    # DKNN
+    if DKNN_args.do_DKNN:
+        # first, we compute the representations for all training examples
+        saveTrainRepTrainer = ComputeAndSaveTrainRepTrainer(
+            model=model,
+            args=training_args,
+            data_collator=data_collator,
+            train_dataset=train_data,
+            layers_to_save=DKNN_args.layers_to_save,
+            read_from_database_path=DKNN_args.read_from_database_path,
+            save_database_path=DKNN_args.save_database_path,
+        )
+        database = saveTrainRepTrainer.compute_and_save_training_points_representations()
+        # create the NearestNeighborFinder
+        if DKNN_args.neighbor_method == "KD-Tree":
+            nearestNeighborFactory = KDTreeNearestNeighborFactory(
+                K=DKNN_args.K, 
+                layers_to_save=DKNN_args.layers_to_save, 
+                database=database, 
+                layer_dim=model.config.hidden_size,
+                leaf_size=DKNN_args.leaf_size
+            )
+        elif DKNN_args.neighbor_method == "LSH":
+            nearestNeighborFactory = LocalitySensitiveHashingNearestNeighborFactory(
+                K=DKNN_args.K, 
+                layers_to_save=DKNN_args.layers_to_save, 
+                database=database, 
+                layer_dim=model.config.hidden_size,
+                num_hash_funct=DKNN_args.num_hash_funct
+            )
+        else:
+            raise ValueError("Illegal Nearest Neighbor Finder method")
+        nearestNeighborFinderFunction = nearestNeighborFactory.createNearestNeighborFunction()
+
+        # create the NearestNeighborLogit Function
+        if DKNN_args.prediction_method == "normal":
+            logitsFactory = LogProbabilityLogitsFactory(label_list)
+        elif DKNN_args.prediction_method == "conformal":
+            # now, compute the conformal socres first
+            computeAndSaveConformalScoresTrainer = ComputeAndSaveConformalScoresTrainer(
+                model=model,
+                args=training_args,
+                caliberation_dataset=eval_data,
+                data_collator=data_collator,
+                nearestNeighborFunction=nearestNeighborFinderFunction,
+                read_from_scores_path=DKNN_args.read_from_scores_path,
+                save_nonconform_scores_path=DKNN_args.save_nonconform_scores_path
+            )
+            scores = computeAndSaveConformalScoresTrainer.compute_and_save_nonconformity_scores()
+            logitsFactory = ConformalLogitsFactory(label_list, scores)
+        else:
+            raise ValueError("Illegal Nearest Neighbor Prediction method")
+        nearestNeighborLogitFunction = logitsFactory.createLogitsFunction()
+
+        # TODO: consider different loss functions?
+        # finally, create the complete Nearest Neighbor Classifier
+        classifier = DeepKNearestNeighborClassifier(
+            NearestNeighborFunction=nearestNeighborFinderFunction,
+            LogitsFunction=nearestNeighborLogitFunction,
+            LossFunction=torch.nn.functional.nll_loss
+        )
+
+        # create custom trainer that utilizes our function
+        trainer = DeepKNearestNeighborTrainer(
+            model=model,
+            args=training_args,
+            train_dataset=train_data,
+            eval_dataset=eval_data if training_args.do_eval else None,
+            data_collator=data_collator,
+            tokenizer=tokenizer,
+            compute_metrics=compute_metrics,
+            classifier=classifier,
+            save_logits=DKNN_args.save_logits,
+            output_and_save_neighbor_ids=DKNN_args.output_and_save_neighbor_ids
+        )
+
     # Evaluation
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
-        if DKNN_args.do_DKNN:
-            # first, we compute the representations for all training examples
-            saveTrainRepTrainer = ComputeAndSaveTrainRepTrainer(
-                model=model,
-                args=training_args,
-                data_collator=data_collator,
-                train_dataset=train_data,
-                layers_to_save=DKNN_args.layers_to_save,
-                read_from_database_path=DKNN_args.read_from_database_path,
-                save_database_path=DKNN_args.save_database_path,
-            )
-            database = saveTrainRepTrainer.compute_and_save_training_points_representations()
-            # create the NearestNeighborFinder
-            if DKNN_args.neighbor_method == "KD-Tree":
-                nearestNeighborFactory = KDTreeNearestNeighborFactory(
-                    K=DKNN_args.K, 
-                    layers_to_save=DKNN_args.layers_to_save, 
-                    database=database, 
-                    layer_dim=model.config.hidden_size,
-                    leaf_size=DKNN_args.leaf_size
-                )
-            elif DKNN_args.neighbor_method == "LSH":
-                nearestNeighborFactory = LocalitySensitiveHashingNearestNeighborFactory(
-                    K=DKNN_args.K, 
-                    layers_to_save=DKNN_args.layers_to_save, 
-                    database=database, 
-                    layer_dim=model.config.hidden_size,
-                    num_hash_funct=DKNN_args.num_hash_funct
-                )
-            else:
-                raise ValueError("Illegal Nearest Neighbor Finder method")
-            nearestNeighborFinderFunction = nearestNeighborFactory.createNearestNeighborFunction()
-
-            # create the NearestNeighborLogit Function
-            if DKNN_args.prediction_method == "normal":
-                logitsFactory = LogProbabilityLogitsFactory(label_list)
-            elif DKNN_args.prediction_method == "conformal":
-                # now, compute the conformal socres first
-                computeAndSaveConformalScoresTrainer = ComputeAndSaveConformalScoresTrainer(
-                    model=model,
-                    args=training_args,
-                    caliberation_dataset=eval_data,
-                    data_collator=data_collator,
-                    nearestNeighborFunction=nearestNeighborFinderFunction,
-                    read_from_scores_path=DKNN_args.read_from_scores_path,
-                    save_nonconform_scores_path=DKNN_args.save_nonconform_scores_path
-                )
-                scores = computeAndSaveConformalScoresTrainer.compute_and_save_nonconformity_scores()
-                logitsFactory = ConformalLogitsFactory(label_list, scores)
-            else:
-                raise ValueError("Illegal Nearest Neighbor Prediction method")
-            nearestNeighborLogitFunction = logitsFactory.createLogitsFunction()
-            
-            # TODO: consider different loss functions?
-
-            # finally, create the complete Nearest Neighbor Classifier
-            classifier = DeepKNearestNeighborClassifier(
-                NearestNeighborFunction=nearestNeighborFinderFunction,
-                LogitsFunction=nearestNeighborLogitFunction,
-                LossFunction=torch.nn.functional.nll_loss
-            )
-
-            # create custom trainer that utilizes our function
-            trainer = DeepKNearestNeighborTrainer(
-                model=model,
-                args=training_args,
-                train_dataset=train_data,
-                eval_dataset=eval_data if training_args.do_eval else None,
-                data_collator=data_collator,
-                tokenizer=tokenizer,
-                compute_metrics=compute_metrics,
-                classifier=classifier
-            )
         metrics = trainer.evaluate(eval_dataset=eval_data)
         max_eval_samples = (
             data_args.max_eval_samples if data_args.max_eval_samples is not None else len(eval_data)
@@ -436,7 +445,7 @@ def main():
         # Removing the `label` columns because it contains -1 and Trainer won't like that.
         test_data = test_data.remove_columns("label")
         predictions = trainer.predict(test_data, metric_key_prefix="predict").predictions
-        if len(predictions) > 1:
+        if type(predictions) is tuple:
             # assume the first thing in the tuple is predictions
             predictions = predictions[0]
         predictions = np.argmax(predictions, axis=1)

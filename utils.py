@@ -3,7 +3,7 @@ from transformers import (
     PreTrainedModel,
     TrainingArguments
 )
-from transformers.utils import find_labels
+from transformers.utils import find_labels, ModelOutput
 from datasets import Dataset
 from packaging import version
 import datasets
@@ -12,7 +12,41 @@ import torch.nn as nn
 import numpy as np
 import inspect
 import re
+import os
 
+def save_matrix_with_tags_to_file(filename: str, tags: np.ndarray, mat: np.ndarray):
+    with open(filename, "a") as f:
+        for tag, row in zip(tags, mat):
+            row_str = np.array2string(row, separator='', max_line_width=np.inf, 
+                                      threshold=np.inf).removeprefix('[').removesuffix(']')
+            f.write(f"{tag} {row_str} \n")
+
+def remove_file_if_already_exists(path_to_file: str):
+    if os.path.exists(path_to_file):
+        os.remove(path_to_file)
+
+def get_hidden_states(is_encoder_decoder: bool, outputs: ModelOutput) -> Tuple[torch.tensor]:
+    """
+    Check if model is encoder-decoder, so that we get hidden states of both the encoder and decoder, 
+    otherwise, return just the hidden states
+
+    Args:
+        is_encoder_decoder (bool): is this model an encoder-decoder model?
+        outputs (ModelOutput): the outputs from the model
+
+    Returns:
+        Tuple[torch.tensor]: (batch_size, seq_length, hidden_dim) of len = embedding layer + model hidden layers
+    """
+    if is_encoder_decoder:
+        return outputs["encoder_hidden_states"] + outputs["decoder_hidden_states"]
+    return outputs["hidden_states"]
+
+def hidden_states_to_cpu(hidden_states: Tuple[torch.tensor]) -> List[torch.tensor]:
+    ret = []
+    for state in hidden_states:
+        ret.append(state.detach().cpu())
+        del state
+    return ret
 
 def get_layer_representations(hidden_states: torch.tensor) -> torch.tensor:
     """
@@ -71,7 +105,7 @@ def compute_credibility(empirical_p: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: the credibility scores for each example (row)
     """
-    return np.max(empirical_p, axis=1)
+    return empirical_p.max(axis=1)
 
 def convert_boolean_array_to_str(arr: np.ndarray) -> Tuple[str, List[str]]:
     string_rep = re.sub("[\[\] ]", "", np.array2string(arr.astype(int), 

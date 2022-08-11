@@ -1,4 +1,5 @@
 # Custom
+test.txt
 ProtoTEx/
 *.e*
 *.o*
@@ -6,6 +7,8 @@ ProtoTEx/
 output/
 layer_*/
 data/
+OLD/
+trial_configurations/
 
 # test notebooks
 *.ipynb_checkpoints/

@@ -7,7 +7,14 @@ from datasets import Dataset
 from typing import Optional, Union
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
-from utils import compute_nonconformity_score, find_signature_columns, prepare_inputs, remove_unused_columns
+from utils import ( 
+    compute_nonconformity_score, 
+    find_signature_columns, 
+    prepare_inputs, 
+    remove_unused_columns, 
+    get_hidden_states, 
+    hidden_states_to_cpu
+)
 from NearestNeighborFinder import AbstractNearestNeighbor
 import torch
 import torch.nn as nn
@@ -33,6 +40,7 @@ class ComputeAndSaveConformalScoresTrainer:
         save_nonconform_scores_path: Optional[str] = None
     ):
         torch.cuda.empty_cache() # save memory before iterating through dataset
+        print(torch.cuda.memory_summary())
         self.model = model
         self.args = args
         self.caliberation_dataset = caliberation_dataset
@@ -63,17 +71,18 @@ class ComputeAndSaveConformalScoresTrainer:
             shuffle=True, batch_size=self.args.eval_batch_size, collate_fn=self.data_collator)
         progress_bar = tqdm(range(len(eval_dataloader)))
         self.model.eval()
-        for i, batch in enumerate(eval_dataloader):
-            inputs = prepare_inputs(batch, self._signature_columns, self.args.device)
-            labels = inputs.pop("labels").cpu().numpy()
-            with torch.no_grad():
-                outputs = self.model(**inputs, output_hidden_states=True)                   # dict: {'loss', 'logits', 'hidden_states'}
-            hidden_states = outputs['hidden_states']
-            neighbors = self.nearestNeighborFunction.nearest_neighbors(hidden_states)
-            for j, label in enumerate(labels):
-                nonconform_score = compute_nonconformity_score(neighbors[j, :].reshape(1, -1), label)
-                nonconformity_scores[i*self.args.eval_batch_size + j] = nonconform_score
-            progress_bar.update(1)
+        with torch.no_grad():
+            for i, batch in enumerate(eval_dataloader):
+                inputs = prepare_inputs(batch, self._signature_columns, self.args.device)
+                labels = inputs.pop("labels").cpu().numpy()
+                outputs = self.model(**inputs, output_hidden_states=True)
+                hidden_states = get_hidden_states(self.model.config.is_encoder_decoder, outputs)
+                # hidden_states = hidden_states_to_cpu(hidden_states)
+                neighbors_labels, _ = self.nearestNeighborFunction.nearest_neighbors(hidden_states)
+                for j, label in enumerate(labels):
+                    nonconform_score = compute_nonconformity_score(neighbors_labels[j, :].reshape(1, -1), label)
+                    nonconformity_scores[i*self.args.eval_batch_size + j] = nonconform_score
+                progress_bar.update(1)
         if self.save_nonconform_scores_path is not None:
             print("***** Running DkNN - Saving Layer Representations *****")
             np.savetxt(self.save_nonconform_scores_path, nonconformity_scores, delimiter=",")

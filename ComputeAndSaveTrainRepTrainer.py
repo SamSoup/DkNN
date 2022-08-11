@@ -7,7 +7,7 @@ from datasets import Dataset
 from typing import Optional, Union, List, Dict
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
-from utils import get_layer_representations, find_signature_columns, prepare_inputs, remove_unused_columns
+from utils import get_layer_representations, find_signature_columns, prepare_inputs, remove_unused_columns, get_hidden_states
 import torch
 import torch.nn as nn
 import numpy as np
@@ -43,6 +43,7 @@ class ComputeAndSaveTrainRepTrainer:
         self.save_database_path = save_database_path
         self._signature_columns = find_signature_columns(model, args)
         self._signature_columns += ["tag"] # also keep tag in training dataset only
+        
 
     def compute_and_save_training_points_representations(self) -> Dict[int, np.ndarray]:
         """
@@ -78,8 +79,10 @@ class ComputeAndSaveTrainRepTrainer:
             tags = inputs.pop("tag").cpu().numpy()
             labels = inputs.pop("labels").cpu().numpy()
             with torch.no_grad():
-                outputs = self.model(**inputs, output_hidden_states=True)                   # dict: {'loss', 'logits', 'hidden_states'}
-            hidden_states = outputs['hidden_states']
+                outputs = self.model(**inputs, output_hidden_states=True)
+            # print(outputs.keys())
+            # input()
+            hidden_states = get_hidden_states(self.model.config.is_encoder_decoder, outputs)
             # Hidden-states of the model = the initial embedding outputs + the output of each layer                            
             # filter representations to what we need: (num_layers+1, batch_size, max_seq_len, embedding_dim)
             for layer in self.layers_to_save:

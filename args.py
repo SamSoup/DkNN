@@ -76,6 +76,16 @@ class DKNNArguments:
             "help": "If neighbor_method is KSH, then this is the number of random hash functions to use"
         }
     )
+    save_logits: Optional[bool] = field (
+        default = False, metadata = {
+            "help": "Should we save the logits of each inference example?"
+        }
+    ) 
+    output_and_save_neighbor_ids: Optional[bool] = field (
+        default = False, metadata = {
+            "help": "Should we output and save the nearest neighbors of each inference example?"
+        }
+    )
 
     def __post_init__(self):
         self.neighbor_methods = {"KD-Tree", "LSH"}
@@ -118,7 +128,7 @@ class DataArguments:
         },
     )
     pad_to_max_length: bool = field(
-        default=True,
+        default=False,
         metadata={
             "help": "Whether to pad all samples to `max_seq_length`. "
             "If False, will pad the samples dynamically when batching to the maximum length."
