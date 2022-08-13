@@ -4,7 +4,7 @@ from sklearn.neighbors import KDTree
 from sklearn.metrics.pairwise import pairwise_distances
 from tqdm.auto import tqdm
 from itertools import combinations
-from utils import get_layer_representations, convert_boolean_array_to_str
+from utils import get_layer_representations
 import numpy as np
 import torch
 import abc
@@ -13,7 +13,7 @@ import abc
 import time
 
 class AbstractNearestNeighbor(abc.ABC):
-    """   
+    """
     Interface for K Nearest Neighbors Search, whereby the only functionality
     required is that given a batch of tensors, return the k nearest neighbor per 
     layer for the examples in the batch
@@ -81,6 +81,36 @@ class KDTreeNearestNeighbor(AbstractNearestNeighbor):
                 neighbors[i, l * self.K : (l+1) * self.K] = labels
             # progress_bar.update(1)
         return neighbors, neighbor_ids
+
+# from pyLSHash import LSHash
+# from utils import l2norm
+# class LocalitySensitiveHashingNearestNeighbor(AbstractNearestNeighbor):
+#     def __init__(self, K:int, layers_to_save: List[int], database: Dict[int, np.ndarray], 
+#                  layer_dim: int, num_hash_funct: int):
+#         print("***** Running DkNN - Initializing LSH Tables *****")
+#         super().__init__(K, layers_to_save, database, layer_dim)
+#         start = time.time()
+#         self.query_tables = {}
+#         # create one LSH object per layer, and index all training examples
+#         for layer in layers_to_save:
+#             self.query_tables[layer] = LSHash(num_hash_funct, layer_dim)
+#             for ex in database[layer]:
+#                 self.query_tables[layer].index(ex[:layer_dim], extra_data=f"{ex[:-1]} {ex[:-2]}") # label, tag
+#         end = time.time()
+#         print(f"Initializing tables took {end - start}")
+
+#     def nearest_neighbors(self, hidden_states: Tuple[torch.tensor], output_neighbor_id: bool=False) -> np.ndarray:
+#         batch_size = hidden_states[0].shape[0]
+#         neighbors = np.zeros((batch_size, len(self.layers_to_save) * self.K))
+#         neighbor_ids = None
+#         if output_neighbor_id:
+#             neighbor_ids = np.zeros(neighbors.shape)
+#         for l, layer in enumerate(self.layers_to_save):
+#             hidden_state_batch = get_layer_representations(hidden_states[layer]).cpu().detach().numpy()
+#             for h in hidden_state_batch:
+#                 res = self.query_tables[layer].query(h, num_results=self.K, dist_func=l2norm)
+#                 # do something with res, but index table takes too long to build
+#         return neighbors, neighbor_ids
 
 class LocalitySensitiveHashingNearestNeighbor(AbstractNearestNeighbor):
     def __init__(self, K:int, layers_to_save: List[int], database: Dict[int, np.ndarray], 

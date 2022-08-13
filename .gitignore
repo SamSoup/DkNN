@@ -9,6 +9,7 @@ layer_*/
 data/
 OLD/
 trial_configurations/
+.cache
 
 # test notebooks
 *.ipynb_checkpoints/

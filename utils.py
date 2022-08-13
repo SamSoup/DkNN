@@ -14,10 +14,13 @@ import inspect
 import re
 import os
 
+def l2norm(x, y):
+    return np.linalg.norm(x-y)
+
 def save_matrix_with_tags_to_file(filename: str, tags: np.ndarray, mat: np.ndarray):
     with open(filename, "a") as f:
         for tag, row in zip(tags, mat):
-            row_str = np.array2string(row, separator='', max_line_width=np.inf, 
+            row_str = np.array2string(row, separator='\t', max_line_width=np.inf, 
                                       threshold=np.inf).removeprefix('[').removesuffix(']')
             f.write(f"{tag} {row_str} \n")
 

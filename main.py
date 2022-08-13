@@ -18,6 +18,7 @@ from transformers import (
     set_seed
 )
 from typing import Dict
+from SaveLogitsTrainer import SaveLogitsTrainer
 from data import train_val_test_split, read_data
 from args import DKNNArguments, DataArguments, ModelArguments
 from transformers.trainer_utils import get_last_checkpoint
@@ -255,9 +256,10 @@ def main():
         if do and sample_limit is not None:
             data = data.select(range(min(len(train_data), sample_limit)))
 
-    # add a unique tag for the training examples - might be useful for retrieval later
-    train_data = train_data.add_column("tag", list(range(train_data.num_rows)))
-    if DKNN_args.save_logits or DKNN_args.output_and_save_neighbor_ids:
+    # add a unique tag for the training examples - might be useful for retrieval later, if we should do DkNN
+    if DKNN_args.do_DKNN:
+        train_data = train_data.add_column("tag", list(range(train_data.num_rows)))
+    if data_args.save_logits or DKNN_args.output_and_save_neighbor_ids:
         eval_data = eval_data.add_column("tag", list(range(eval_data.num_rows)))
         test_data = test_data.add_column("tag", list(range(test_data.num_rows)))
 
@@ -309,10 +311,11 @@ def main():
         tokenizer=tokenizer,
         data_collator=data_collator,
         callbacks=callbacks,
+        save_logits=data_args.save_logits,
         loss_fct=nn.CrossEntropyLoss(weight=weights)
     )
     else:
-        trainer = Trainer(
+        trainer = SaveLogitsTrainer(
             model=model,
             args=training_args,
             train_dataset=train_data if training_args.do_train else None,
@@ -321,6 +324,7 @@ def main():
             tokenizer=tokenizer,
             data_collator=data_collator,
             callbacks=callbacks,
+            save_logits=data_args.save_logits
         )
 
     # detect last checkpt
@@ -359,6 +363,7 @@ def main():
             model=model,
             args=training_args,
             data_collator=data_collator,
+            tokenizer=tokenizer,
             train_dataset=train_data,
             layers_to_save=DKNN_args.layers_to_save,
             read_from_database_path=DKNN_args.read_from_database_path,
@@ -396,6 +401,7 @@ def main():
                 args=training_args,
                 caliberation_dataset=eval_data,
                 data_collator=data_collator,
+                tokenizer=tokenizer,
                 nearestNeighborFunction=nearestNeighborFinderFunction,
                 read_from_scores_path=DKNN_args.read_from_scores_path,
                 save_nonconform_scores_path=DKNN_args.save_nonconform_scores_path
@@ -424,7 +430,7 @@ def main():
             tokenizer=tokenizer,
             compute_metrics=compute_metrics,
             classifier=classifier,
-            save_logits=DKNN_args.save_logits,
+            save_logits=data_args.save_logits,
             output_and_save_neighbor_ids=DKNN_args.output_and_save_neighbor_ids
         )
 
@@ -445,8 +451,8 @@ def main():
         # Removing the `label` columns because it contains -1 and Trainer won't like that.
         test_data = test_data.remove_columns("label")
         predictions = trainer.predict(test_data, metric_key_prefix="predict").predictions
-        if type(predictions) is tuple:
-            # assume the first thing in the tuple is predictions
+        if isinstance(predictions, tuple) and len(predictions) != test_data.num_rows:
+            # assume the first thing in the tuple is predictions, if it's multiple tensors
             predictions = predictions[0]
         predictions = np.argmax(predictions, axis=1)
 

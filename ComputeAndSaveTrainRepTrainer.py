@@ -1,8 +1,10 @@
 from transformers import (
     DataCollator,
     PreTrainedModel,
+    PreTrainedTokenizerBase,
     TrainingArguments
 )
+from transformers.data.data_collator import default_data_collator, DataCollatorWithPadding
 from datasets import Dataset
 from typing import Optional, Union, List, Dict
 from torch.utils.data import DataLoader
@@ -29,6 +31,7 @@ class ComputeAndSaveTrainRepTrainer:
         args: TrainingArguments = None,
         train_dataset: Optional[Dataset] = None,
         data_collator: Optional[DataCollator] = None,
+        tokenizer: Optional[PreTrainedTokenizerBase] = None,
         layers_to_save: List[int] = [],
         read_from_database_path: bool = False,
         save_database_path: Optional[str] = None,
@@ -37,7 +40,8 @@ class ComputeAndSaveTrainRepTrainer:
         self.model = model
         self.args = args
         self.train_dataset = train_dataset
-        self.data_collator = data_collator
+        default_collator = default_data_collator if tokenizer is None else DataCollatorWithPadding(tokenizer)
+        self.data_collator = data_collator if data_collator is not None else default_collator
         self.layers_to_save = layers_to_save
         self.read_from_database_path = read_from_database_path
         self.save_database_path = save_database_path

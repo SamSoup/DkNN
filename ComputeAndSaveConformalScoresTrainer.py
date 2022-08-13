@@ -1,8 +1,10 @@
 from transformers import (
     DataCollator,
     PreTrainedModel,
+    PreTrainedTokenizerBase,
     TrainingArguments
 )
+from transformers.data.data_collator import default_data_collator, DataCollatorWithPadding
 from datasets import Dataset
 from typing import Optional, Union
 from torch.utils.data import DataLoader
@@ -12,8 +14,7 @@ from utils import (
     find_signature_columns, 
     prepare_inputs, 
     remove_unused_columns, 
-    get_hidden_states, 
-    hidden_states_to_cpu
+    get_hidden_states
 )
 from NearestNeighborFinder import AbstractNearestNeighbor
 import torch
@@ -35,6 +36,7 @@ class ComputeAndSaveConformalScoresTrainer:
         args: TrainingArguments = None,
         caliberation_dataset: Optional[Dataset] = None,
         data_collator: Optional[DataCollator] = None,
+        tokenizer: Optional[PreTrainedTokenizerBase] = None,
         nearestNeighborFunction: AbstractNearestNeighbor = None,
         read_from_scores_path: bool = False,
         save_nonconform_scores_path: Optional[str] = None
@@ -44,7 +46,8 @@ class ComputeAndSaveConformalScoresTrainer:
         self.model = model
         self.args = args
         self.caliberation_dataset = caliberation_dataset
-        self.data_collator = data_collator
+        default_collator = default_data_collator if tokenizer is None else DataCollatorWithPadding(tokenizer)
+        self.data_collator = data_collator if data_collator is not None else default_collator
         self.nearestNeighborFunction = nearestNeighborFunction
         self.read_from_scores_path = read_from_scores_path
         self.save_nonconform_scores_path = save_nonconform_scores_path

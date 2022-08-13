@@ -76,11 +76,6 @@ class DKNNArguments:
             "help": "If neighbor_method is KSH, then this is the number of random hash functions to use"
         }
     )
-    save_logits: Optional[bool] = field (
-        default = False, metadata = {
-            "help": "Should we save the logits of each inference example?"
-        }
-    ) 
     output_and_save_neighbor_ids: Optional[bool] = field (
         default = False, metadata = {
             "help": "Should we output and save the nearest neighbors of each inference example?"
@@ -226,6 +221,11 @@ class DataArguments:
             "help": "The weights per class for use in computing the weighted loss"
         }
     )
+    save_logits: Optional[bool] = field (
+        default = False, metadata = {
+            "help": "Should we save the logits of each inference example?"
+        }
+    ) 
 
     def __post_init__(self):
         to_check = {

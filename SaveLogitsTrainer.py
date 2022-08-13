@@ -14,20 +14,20 @@ from transformers import (
     TrainingArguments
 )
 from transformers.trainer_utils import PredictionOutput
+from transformers.modeling_utils import unwrap_model
 from transformers.trainer_pt_utils import nested_detach
+from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES
 from typing import Callable, Union, Optional, Dict, List, Tuple, Any
-from SaveLogitsTrainer import SaveLogitsTrainer
-from utils import get_hidden_states, hidden_states_to_cpu, find_signature_columns, remove_file_if_already_exists, remove_unused_columns, save_matrix_with_tags_to_file
+from utils import find_signature_columns, remove_file_if_already_exists, remove_unused_columns, save_matrix_with_tags_to_file
 from DeepKNearestNeighborClassifier import DeepKNearestNeighborClassifier
 from datasets import Dataset
 from packaging import version
 import torch.nn as nn
 import torch
-import numpy as np
 import os
     
-class DeepKNearestNeighborTrainer(SaveLogitsTrainer):
-    """Custom Trainer that uses a Deep K Nearest Neighbor Classifier
+class SaveLogitsTrainer(Trainer):
+    """Custom Trainer that uses allows user to specify whether logits should be saved
 
     Args:
         Trainer (Transformers.Trainer): Override Original Trainer
@@ -47,78 +47,57 @@ class DeepKNearestNeighborTrainer(SaveLogitsTrainer):
         optimizers: Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR] = (None, None),
         preprocess_logits_for_metrics: Callable[[torch.Tensor, torch.Tensor], torch.Tensor] = None,
         save_logits: bool = False,
-        classifier: DeepKNearestNeighborClassifier = None,
-        output_and_save_neighbor_ids: bool = False,        
     ):
         """
         Arguments follows directly from Transformers.Trainer except the following:
         """
-        super().__init__(model, args, train_dataset, eval_dataset, data_collator, tokenizer, 
-                         model_init, compute_metrics, callbacks, optimizers, 
-                         preprocess_logits_for_metrics, save_logits)
+        super().__init__(model, args, data_collator, train_dataset, 
+                            eval_dataset, tokenizer, model_init, compute_metrics,
+                            callbacks, optimizers, preprocess_logits_for_metrics)
         torch.cuda.empty_cache() # save memory before iterating through dataset
-        self.classifier = classifier
-        self.output_and_save_neighbor_ids = output_and_save_neighbor_ids
+        self.save_logits = save_logits
+        self.save_logits_path = None
         self._signature_columns = find_signature_columns(model, args)
         self._signature_columns += ["tag"]
-
-    def DKNN_predict(self, inputs: Dict[str, Union[torch.Tensor, Any]], 
-                     labels: torch.Tensor, model: nn.Module) -> Dict[str, torch.Tensor]:
-        if self.save_logits or self.output_and_save_neighbor_ids:
-            tags = inputs.pop("tag").cpu().detach().numpy()
-        outputs = model(**inputs, output_hidden_states=True)
-        is_encoder_decoder = (model.module.config.is_encoder_decoder if type(model) == nn.parallel.DataParallel 
-                            else model.config.is_encoder_decoder)
-        hidden_states = get_hidden_states(is_encoder_decoder, outputs)
-        # NOTE: hidden_states occpuy a LOT of cuda memory, so we need to 
-        # delete them from the GPU immediately after retrieval
-        hidden_states = hidden_states_to_cpu(hidden_states)
-        torch.cuda.empty_cache()
-        if labels is not None and labels.dtype is torch.bool:
-            labels = labels.type(torch.LongTensor).to(self.args.device)
-        loss, logits, neighbor_ids = self.classifier.compute_loss_and_logits(
-            hidden_states, labels, self.args.device, self.output_and_save_neighbor_ids
-        )
-        # save the metadatas, if we should - logits, neighbors
-        if self.save_logits:
-            save_matrix_with_tags_to_file(self.save_logits_path, tags, logits.cpu().detach().numpy())
-        if self.output_and_save_neighbor_ids:
-            save_matrix_with_tags_to_file(self.save_neighbor_ids_path, tags, neighbor_ids.astype(np.int64))
-        outputs = { "loss": loss, "logits": logits }
-        return outputs
 
     def evaluate(self, eval_dataset: Optional[Dataset] = None, ignore_keys: Optional[List[str]] = None, 
                  metric_key_prefix: str = "eval") -> Dict[str, float]:
         self._create_save_files(prefix=metric_key_prefix)
         return super().evaluate(eval_dataset, ignore_keys, metric_key_prefix)
 
-    def compute_loss(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]], 
-                     return_outputs: bool = False) -> Union[torch.Tensor, Tuple[torch.Tensor, Dict[str, torch.Tensor]]]:
+    def compute_loss(self, model, inputs, return_outputs=False):
         """
         How the loss is computed by Trainer. By default, all models return the loss in the first element.
-        We override this function to utilize our custom classifer incorporated as well as detach
-        the hidden states from GPU to save cuda memory
-
-        Args:
-            model (nn.Module): the model for which to compute logits from
-            inputs (Dict[str, Union[torch.Tensor, Any]]): the input batch of example tensors
-            return_outputs (bool, optional): should we return logits along with loss. Defaults to False.
-
-        Returns:
-            Either a tuple of (loss, logits) or just the loss when return_outputs if False
+        Subclass and override for custom behavior.
         """
-
-        if "labels" in inputs:
+        if self.save_logits_path is not None and self.save_logits:
+            tags = inputs.pop("tag").cpu().detach().numpy()
+        if self.label_smoother is not None and "labels" in inputs:
             labels = inputs.pop("labels")
         else:
             labels = None
-        # NOTE: use DKNN at eval time
-        outputs = self.DKNN_predict(inputs, labels, model)
-        if labels is not None and self.label_smoother is not None:
-            loss = self.label_smoother(outputs, labels)
+        outputs = model(**inputs)
+        # Save past state if it exists
+        # TODO: this needs to be fixed and made cleaner later.
+        if self.args.past_index >= 0:
+            self._past = outputs[self.args.past_index]
+
+        if labels is not None:
+            if unwrap_model(model)._get_name() in MODEL_FOR_CAUSAL_LM_MAPPING_NAMES.values():
+                loss = self.label_smoother(outputs, labels, shift_labels=True)
+            else:
+                loss = self.label_smoother(outputs, labels)
         else:
+            if isinstance(outputs, dict) and "loss" not in outputs:
+                raise ValueError(
+                    "The model did not return a loss from the inputs, only the following keys: "
+                    f"{','.join(outputs.keys())}. For reference, the inputs it received are {','.join(inputs.keys())}."
+                )
             # We don't use .loss here since the model may return tuples instead of ModelOutput.
             loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
+
+        if self.save_logits_path is not None and self.save_logits:
+            save_matrix_with_tags_to_file(self.save_logits_path, tags, outputs['logits'].cpu().detach().numpy())
         return (loss, outputs) if return_outputs else loss
 
     def predict(self, test_dataset: Dataset, ignore_keys: Optional[List[str]] = None, 
@@ -182,8 +161,12 @@ class DeepKNearestNeighborTrainer(SaveLogitsTrainer):
             else:
                 loss = None
                 with self.compute_loss_context_manager():
-                    # NOTE: use DKNN at predict time
-                    logits = self.DKNN_predict(inputs, labels, model)["logits"]
+                    if self.save_logits:
+                        tags = inputs.pop("tag").cpu().detach().numpy()
+                    outputs = model(**inputs)
+                    logits = outputs["logits"]
+                    if self.save_logits:
+                        save_matrix_with_tags_to_file(self.save_logits_path, tags, outputs['logits'].cpu().detach().numpy())
                 # TODO: this needs to be fixed and made cleaner later.
                 if self.args.past_index >= 0:
                     self._past = outputs[self.args.past_index - 1]
@@ -207,9 +190,6 @@ class DeepKNearestNeighborTrainer(SaveLogitsTrainer):
         )
 
     def _create_save_files(self, prefix: str):
-        if self.output_and_save_neighbor_ids:
-            self.save_neighbor_ids_path = os.path.join(self.args.output_dir, f"{prefix}_neighbors.txt")
-            remove_file_if_already_exists(self.save_neighbor_ids_path)
         if self.save_logits:
             self.save_logits_path = os.path.join(self.args.output_dir, f"{prefix}_logits.txt")
             remove_file_if_already_exists(self.save_logits_path)

@@ -1,13 +1,19 @@
-preprocess:
-	python3 preprocess.py ./data/hatespeech_text_label_vote.csv ./data/train.csv
+dev:
+	idev -m 120 -p gpu-a100
+	conda activate DkNN
+
+taccinfo:
+	/usr/local/etc/taccinfo
 
 create-trial:
 	mkdir trial_configurations/$(name)
 	touch trial_configurations/$(name)/train.json
-	touch trial_configurations/$(name)/eval.json
-	touch trial_configurations/$(name)/test.json
+	touch trial_configurations/$(name)/eval_and_test.json
 	mkdir trial_configurations/$(name)/DKNN
-	touch trial_configurations/$(name)/DKNN/trial1.json
+	touch trial_configurations/$(name)/DKNN/KD-Conformal.json
+	touch trial_configurations/$(name)/DKNN/KD-Normal.json
+	touch trial_configurations/$(name)/DKNN/LSH-Conformal.json
+	touch trial_configurations/$(name)/DKNN/LSH-Conformal.json
 
 clean:
 	rm -f *.e*

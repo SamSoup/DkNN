@@ -46,7 +46,8 @@ conda install -n DkNN ipykernel --update-deps --force-reinstall
 conda install -c huggingface transformers
 conda install -c conda-forge ray-tune datasets scikit-learn
 python -m pip install torch==1.9.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html
-python -m pip install pyLSHash
+python -m pip install sentencepiece
+python -m pip install lshashing==1.0.5
 ```
 
 On TACC: add these flags to pip install
