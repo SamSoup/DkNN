@@ -48,6 +48,9 @@ conda install -c conda-forge ray-tune datasets scikit-learn
 python -m pip install torch==1.9.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html
 python -m pip install sentencepiece
 python -m pip install lshashing==1.0.5
+python -m pip install lshashpy3
+python -m pip install future
+python -m pip install --user numpy scipy matplotlib ipython jupyter pandas sympy nose
 ```
 
 On TACC: add these flags to pip install
@@ -64,6 +67,11 @@ Note that it's the responsibility of the user to specify which layers' represent
 ```
 python3 main.py <path_to_json_configuration_file>
 ```
+
+# Jupyter
+
+conda activate DkNN
+ipython kernel install --user --DkNN
 
 # Documentation
 

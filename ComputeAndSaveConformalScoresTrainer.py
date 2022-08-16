@@ -14,7 +14,8 @@ from utils import (
     find_signature_columns, 
     prepare_inputs, 
     remove_unused_columns, 
-    get_hidden_states
+    get_hidden_states,
+    hidden_states_to_cpu
 )
 from NearestNeighborFinder import AbstractNearestNeighbor
 import torch
@@ -80,7 +81,7 @@ class ComputeAndSaveConformalScoresTrainer:
                 labels = inputs.pop("labels").cpu().numpy()
                 outputs = self.model(**inputs, output_hidden_states=True)
                 hidden_states = get_hidden_states(self.model.config.is_encoder_decoder, outputs)
-                # hidden_states = hidden_states_to_cpu(hidden_states)
+                hidden_states = hidden_states_to_cpu(hidden_states)
                 neighbors_labels, _ = self.nearestNeighborFunction.nearest_neighbors(hidden_states)
                 for j, label in enumerate(labels):
                     nonconform_score = compute_nonconformity_score(neighbors_labels[j, :].reshape(1, -1), label)

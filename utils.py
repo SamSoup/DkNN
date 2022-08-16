@@ -22,7 +22,7 @@ def save_matrix_with_tags_to_file(filename: str, tags: np.ndarray, mat: np.ndarr
         for tag, row in zip(tags, mat):
             row_str = np.array2string(row, separator='\t', max_line_width=np.inf, 
                                       threshold=np.inf).removeprefix('[').removesuffix(']')
-            f.write(f"{tag} {row_str} \n")
+            f.write(f"{tag}\t{row_str}\n")
 
 def remove_file_if_already_exists(path_to_file: str):
     if os.path.exists(path_to_file):

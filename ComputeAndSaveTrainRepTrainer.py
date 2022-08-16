@@ -15,6 +15,7 @@ import torch.nn as nn
 import numpy as np
 import os
 import shutil
+import time
 
 class ComputeAndSaveTrainRepTrainer:
     """
@@ -62,11 +63,14 @@ class ComputeAndSaveTrainRepTrainer:
         """
         if self.read_from_database_path:
             print("***** Running DkNN - Loading database of layer representation from specified path *****")
+            start = time.time()
             database = { 
                 layer: np.loadtxt(os.path.join(self.save_database_path, f"layer_{layer}.csv"), 
                                     delimiter=",") 
                 for layer in self.layers_to_save 
             }
+            end = time.time()
+            print(f"Initializing tables took {end - start}")
             return database
 
         print("***** Running DkNN - Computing Layer Representations for Training Examples *****")
@@ -84,8 +88,6 @@ class ComputeAndSaveTrainRepTrainer:
             labels = inputs.pop("labels").cpu().numpy()
             with torch.no_grad():
                 outputs = self.model(**inputs, output_hidden_states=True)
-            # print(outputs.keys())
-            # input()
             hidden_states = get_hidden_states(self.model.config.is_encoder_decoder, outputs)
             # Hidden-states of the model = the initial embedding outputs + the output of each layer                            
             # filter representations to what we need: (num_layers+1, batch_size, max_seq_len, embedding_dim)

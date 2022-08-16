@@ -19,3 +19,6 @@ clean:
 	rm -f *.e*
 	rm -f *.o*
 	conda clean --all
+
+compile_results:
+	python3 compile_results.py ./result_locations.json compiled_results.csv
