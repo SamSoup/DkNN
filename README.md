@@ -73,5 +73,9 @@ python3 main.py <path_to_json_configuration_file>
 conda activate DkNN
 ipython kernel install --user --DkNN
 
+# Rstudio
+
+setwd("/work/06782/ysu707/ls6/DkNN")
+
 # Documentation
 

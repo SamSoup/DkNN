@@ -81,17 +81,41 @@ class DKNNArguments:
             "help": "Should we output and save the nearest neighbors of each inference example?"
         }
     )
+    dist_metric: Optional[str] = field (
+        default="minkowski", metadata = {
+            "help": "The distance function to use for computing nearest neighbors, must be one of "
+            "minkowski (with power specified) or cosine"
+        }
+    )
+    minkowski_power: Optional[int] = field (
+        default=2, metadata = {
+            "help": "The power p to be used in the minkowski distance function, if we should use it"
+        }
+    )
+    dist_to_weight_fct: Optional[str] = field (
+        default="uniform", metadata = {
+            "help": "Which function of distances to weights conversion should we use; may be one of <>"
+        }
+    )
 
     def __post_init__(self):
         self.neighbor_methods = {"KD-Tree", "LSH"}
         self.prediction_methods = {"normal", "conformal"}
-        if self.neighbor_method is not None:
+        self.dist_metrics = {"minkowski", "cosine"}
+        if self.do_DKNN:
             assert(
                 self.neighbor_method in self.neighbor_methods
             ), f"Nearest Neighbor method be one of {self.neighbor_methods}"
-        assert(
-            self.prediction_method in self.prediction_methods
+            assert (
+                self.dist_metric in self.dist_metrics
+            ), f"Nearest Neighbor distance method be one of {self.neighbor_methods}"
+            assert(
+                self.prediction_method in self.prediction_methods
             ), f"Prediction method must be one of {self.prediction_methods}"
+            if self.neighbor_method == "KD-Tree":
+                assert(
+                    self.dist_metric != "cosine"
+                ), f"For KD-Tree, the distance function cosine is not supported"
         if self.read_from_database_path:
             assert(
                 os.path.exists(self.save_database_path) and os.path.isdir(self.save_database_path)

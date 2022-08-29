@@ -7,9 +7,8 @@ from utils import save_matrix_with_tags_to_file
 from datasets import Dataset
 from transformers import (
     DataCollator,
-    EvalPrediction, 
-    PreTrainedModel, 
-    Trainer, 
+    EvalPrediction,
+    PreTrainedModel,
     PreTrainedTokenizerBase,
     TrainerCallback,
     TrainingArguments

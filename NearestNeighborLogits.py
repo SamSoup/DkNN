@@ -12,17 +12,27 @@ class AbstractLogits(abc.ABC):
         self.label_to_id = {label: i for i, label in enumerate(label_list)}
 
     @abc.abstractmethod
-    def compute_logits(self, neighbors: np.ndarray) -> np.ndarray:
+    def compute_logits(self, neighbors: np.ndarray, weights: np.ndarray) -> np.ndarray:
+        """
+        Compute logits using the retrieved neighbor labels and each label's associated weight
+
+        Args:
+            neighbors (np.ndarray): the total set of neighbors' labels 
+            weights (np.ndarray): the weight of each neighbor (same shape as neighbors)
+
+        Returns:
+            np.ndarray: some form of logits that can be used for inference
+        """
         raise NotImplementedError
 
 class LogProbabilityLogits(AbstractLogits):
-    def compute_logits(self, neighbors: np.ndarray) -> np.ndarray:
-        # first find the log-probabilities for each class 
+    def compute_logits(self, neighbors: np.ndarray, weights: np.ndarray) -> np.ndarray:
+        # find the log-probabilities for each class
         probs = np.zeros((neighbors.shape[0], len(self.label_list)))
         for i, label in enumerate(self.label_list):
             label_id = self.label_to_id[label]
-            # probability of each class = # of examples in each class / total neighbors
-            probs[:, i] = (neighbors == label_id).sum(axis=1) / neighbors.shape[1]
+            # probability of each class = # of examples in each class * dist / total neighbors
+            probs[:, i] = ((neighbors == label_id) * weights).sum(axis=1) / neighbors.shape[1]
         logits = np.log(probs) # NOTE: may give -Inf when probs = 0
         return logits # (self.args.eval_batch_size, len(self.label_list))
 
@@ -31,11 +41,11 @@ class ConformalLogits(AbstractLogits):
         super().__init__(label_list)
         self.scores = scores
 
-    def compute_logits(self, neighbors: np.ndarray) -> np.ndarray:
+    def compute_logits(self, neighbors: np.ndarray, weights: np.ndarray) -> np.ndarray:
         empirical_p = np.zeros((neighbors.shape[0], len(self.label_list))) 
         for i, label in enumerate(self.label_list):
             label_id = self.label_to_id[label]
-            nonconform_scores = compute_nonconformity_score(neighbors, label_id)
+            nonconform_scores = compute_nonconformity_score(neighbors, label_id, weights)
             for j, score in enumerate(nonconform_scores):
                 empirical_p[j, i] = (self.scores >= score).sum() / len(self.scores)
         return empirical_p # (self.args.eval_batch_size, len(self.label_list))

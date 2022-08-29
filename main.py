@@ -24,12 +24,15 @@ from args import DKNNArguments, DataArguments, ModelArguments
 from transformers.trainer_utils import get_last_checkpoint
 from datasets import load_metric, Dataset, load_dataset
 from NearestNeighborLogits import LogProbabilityLogitsFactory, ConformalLogitsFactory
-from NearestNeighborFinder import KDTreeNearestNeighborFactory, LocalitySensitiveHashingNearestNeighborFactory
+from NearestNeighborDistancesToWeightsFuncts import NearestNeighborDistancesToWeightsFuncts
+from NearestNeighborFinders import KDTreeNearestNeighborFactory, LocalitySensitiveHashingNearestNeighborFactory
 from DeepKNearestNeighborClassifier import DeepKNearestNeighborClassifier
 from ComputeAndSaveTrainRepTrainer import ComputeAndSaveTrainRepTrainer
 from ComputeAndSaveConformalScoresTrainer import ComputeAndSaveConformalScoresTrainer
 from DeepKNearestNeighborTrainer import DeepKNearestNeighborTrainer
 from CustomLossTrainer import CustomLossTrainer
+from sklearn.metrics import DistanceMetric
+from sklearn.metrics.pairwise import cosine_distances
 import numpy as np
 import torch.nn as nn
 import os
@@ -148,8 +151,8 @@ def main():
     eval_data = Dataset.from_pandas(eval_data)
     test_data = Dataset.from_pandas(test_data)
 
-    # note this assumes that the training data must have all possible labels
-    # note also that this assumes a classification task
+    # NOTE: this script assumes that the training data must have all possible labels
+    # NOTE: this script also assumes a classification task
     label_list = train_data.unique("label")
     label_list.sort()  # Let's sort it for determinism
     num_labels = len(label_list)
@@ -227,35 +230,25 @@ def main():
             result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
         return result
     with training_args.main_process_first(desc="dataset map pre-processing"):
-        train_data = train_data.map(
-            preprocess_function,
-            batched=True,
-            load_from_cache_file=not data_args.overwrite_cache,
-            desc="Running tokenizer on training dataset",
-        )
-        eval_data = eval_data.map(
-            preprocess_function,
-            batched=True,
-            load_from_cache_file=not data_args.overwrite_cache,
-            desc="Running tokenizer on eval dataset",
-        )
-        test_data = test_data.map(
-            preprocess_function,
-            batched=True,
-            load_from_cache_file=not data_args.overwrite_cache,
-            desc="Running tokenizer on test dataset",
-        )
-
-    # make sure that we trunk examples, if specified
-    check = [
-        (training_args.do_train, data_args.max_train_samples, train_data),
-        (training_args.do_eval, data_args.max_eval_samples, eval_data),
-        (training_args.do_predict, data_args.max_test_samples, test_data),
-    ]
-    for do, sample_limit, data in check:
-        if do and sample_limit is not None:
-            data = data.select(range(min(len(train_data), sample_limit)))
-
+        data_dict = {
+            "train": [training_args.do_train, data_args.max_train_samples, train_data],
+            "eval": [training_args.do_eval, data_args.max_eval_samples, eval_data],
+            "test": [training_args.do_predict, data_args.max_test_samples, test_data]
+        }
+        for split in data_dict:
+            # preprocess each dataset
+            data_dict[split][2] = data_dict[split][2].map(
+                preprocess_function,
+                batched=True,
+                load_from_cache_file=not data_args.overwrite_cache,
+                desc=f"Running tokenizer on {split} dataset",
+            )
+            # truncate each dataset if specified
+            do, sample_limit = data_dict[split][0], data_dict[split][1]
+            if do and sample_limit is not None:
+                data_dict[split][2] = data_dict[split][2].select(range(min(len(train_data), sample_limit)))
+    
+    train_data, eval_data, test_data = data_dict['train'][2], data_dict['eval'][2], data_dict['test'][2]
     # add a unique tag for the training examples - might be useful for retrieval later, if we should do DkNN
     if DKNN_args.do_DKNN:
         train_data = train_data.add_column("tag", list(range(train_data.num_rows)))
@@ -301,7 +294,7 @@ def main():
 
     # Initialize our Trainer
     if data_args.do_weighted_cross_entropy_loss:
-        weights = torch.tensor(data_args.weights_per_class).to(device)
+        train_class_weights = torch.tensor(data_args.weights_per_class).to(device)
         trainer = CustomLossTrainer(
         model=model,
         args=training_args,
@@ -312,7 +305,7 @@ def main():
         data_collator=data_collator,
         callbacks=callbacks,
         save_logits=data_args.save_logits,
-        loss_fct=nn.CrossEntropyLoss(weight=weights)
+        loss_fct=nn.CrossEntropyLoss(weight=train_class_weights)
     )
     else:
         trainer = SaveLogitsTrainer(
@@ -371,12 +364,18 @@ def main():
         )
         database = saveTrainRepTrainer.compute_and_save_training_points_representations()
         # create the NearestNeighborFinder
+        # first, we need to obtain the distance function
+        if DKNN_args.dist_metric == "minkowski":
+            dist_funct = DistanceMetric.get_metric('minkowski', p=int(DKNN_args.minkowski_power))
+        elif DKNN_args.dist_metric == "cosine":
+            dist_funct = cosine_distances
         if DKNN_args.neighbor_method == "KD-Tree":
             nearestNeighborFactory = KDTreeNearestNeighborFactory(
                 K=DKNN_args.K, 
                 layers_to_save=DKNN_args.layers_to_save, 
                 database=database, 
                 layer_dim=model.config.hidden_size,
+                dist_metric=dist_funct,
                 leaf_size=DKNN_args.leaf_size
             )
         elif DKNN_args.neighbor_method == "LSH":
@@ -385,17 +384,21 @@ def main():
                 layers_to_save=DKNN_args.layers_to_save, 
                 database=database, 
                 layer_dim=model.config.hidden_size,
+                dist_metric=dist_funct,
                 num_hash_funct=DKNN_args.num_hash_funct
             )
         else:
             raise ValueError("Illegal Nearest Neighbor Finder method")
         nearestNeighborFinderFunction = nearestNeighborFactory.createNearestNeighborFunction()
 
+        # specify the conversion from distances to weight method
+        dist_to_weight_fct = NearestNeighborDistancesToWeightsFuncts(DKNN_args.K).get(DKNN_args.dist_to_weight_fct)
+
         # create the NearestNeighborLogit Function
         if DKNN_args.prediction_method == "normal":
             logitsFactory = LogProbabilityLogitsFactory(label_list)
         elif DKNN_args.prediction_method == "conformal":
-            # now, compute the conformal socres first
+            # compute the conformal socres first
             computeAndSaveConformalScoresTrainer = ComputeAndSaveConformalScoresTrainer(
                 model=model,
                 args=training_args,
@@ -403,6 +406,7 @@ def main():
                 data_collator=data_collator,
                 tokenizer=tokenizer,
                 nearestNeighborFunction=nearestNeighborFinderFunction,
+                dist_to_weight_fct=dist_to_weight_fct,
                 read_from_scores_path=DKNN_args.read_from_scores_path,
                 save_nonconform_scores_path=DKNN_args.save_nonconform_scores_path
             )
@@ -416,6 +420,7 @@ def main():
         # finally, create the complete Nearest Neighbor Classifier
         classifier = DeepKNearestNeighborClassifier(
             NearestNeighborFunction=nearestNeighborFinderFunction,
+            dist_to_weight_fct=dist_to_weight_fct,
             LogitsFunction=nearestNeighborLogitFunction,
             LossFunction=torch.nn.functional.nll_loss
         )

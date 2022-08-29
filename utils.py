@@ -14,7 +14,7 @@ import inspect
 import re
 import os
 
-def l2norm(x, y):
+def l2norm(x: np.ndarray, y: np.ndarray):
     return np.linalg.norm(x-y)
 
 def save_matrix_with_tags_to_file(filename: str, tags: np.ndarray, mat: np.ndarray):
@@ -67,7 +67,7 @@ def get_layer_representations(hidden_states: torch.tensor) -> torch.tensor:
     # average across all tokens to obtain embedding -> (batch_size, embedding_dim)
     return torch.mean(hidden_states, dim=1).squeeze().detach().cpu()
 
-def compute_nonconformity_score(neighbors: np.ndarray, label_id: int) -> np.ndarray:
+def compute_nonconformity_score(neighbors: np.ndarray, label_id: int, weights: np.ndarray) -> np.ndarray:
     """
     We compute the non-conformity score for each example in the evaluation dataset as:
             α(x, j) = ∑_{ λ ∈ 1..l} |i ∈ Ω_λ : i != j|, for all x ∈ caliberation set and j ∈ label_list
@@ -81,7 +81,7 @@ def compute_nonconformity_score(neighbors: np.ndarray, label_id: int) -> np.ndar
     Returns:
         np.ndarray: the non-conformity score for each example in the batch
     """
-    return (neighbors != label_id).sum(axis=1)
+    return ((neighbors != label_id) * weights).sum(axis=1)
 
 def compute_confidence(empirical_p: np.ndarray) -> np.ndarray:
     """

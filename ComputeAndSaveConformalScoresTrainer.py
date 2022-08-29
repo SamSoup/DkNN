@@ -6,7 +6,7 @@ from transformers import (
 )
 from transformers.data.data_collator import default_data_collator, DataCollatorWithPadding
 from datasets import Dataset
-from typing import Optional, Union
+from typing import Optional, Union, Callable
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from utils import ( 
@@ -17,7 +17,7 @@ from utils import (
     get_hidden_states,
     hidden_states_to_cpu
 )
-from NearestNeighborFinder import AbstractNearestNeighbor
+from NearestNeighborFinders import AbstractNearestNeighbor
 import torch
 import torch.nn as nn
 import numpy as np
@@ -39,6 +39,7 @@ class ComputeAndSaveConformalScoresTrainer:
         data_collator: Optional[DataCollator] = None,
         tokenizer: Optional[PreTrainedTokenizerBase] = None,
         nearestNeighborFunction: AbstractNearestNeighbor = None,
+        dist_to_weight_fct: Callable[[np.ndarray], np.ndarray] = None,
         read_from_scores_path: bool = False,
         save_nonconform_scores_path: Optional[str] = None
     ):
@@ -50,6 +51,7 @@ class ComputeAndSaveConformalScoresTrainer:
         default_collator = default_data_collator if tokenizer is None else DataCollatorWithPadding(tokenizer)
         self.data_collator = data_collator if data_collator is not None else default_collator
         self.nearestNeighborFunction = nearestNeighborFunction
+        self.dist_to_weight_fct = dist_to_weight_fct
         self.read_from_scores_path = read_from_scores_path
         self.save_nonconform_scores_path = save_nonconform_scores_path
         self._signature_columns = find_signature_columns(model, args)
@@ -82,9 +84,10 @@ class ComputeAndSaveConformalScoresTrainer:
                 outputs = self.model(**inputs, output_hidden_states=True)
                 hidden_states = get_hidden_states(self.model.config.is_encoder_decoder, outputs)
                 hidden_states = hidden_states_to_cpu(hidden_states)
-                neighbors_labels, _ = self.nearestNeighborFunction.nearest_neighbors(hidden_states)
+                distances, neighbors_labels, _ = self.nearestNeighborFunction.nearest_neighbors(hidden_states)
+                weights = self.dist_to_weight_fct(distances)
                 for j, label in enumerate(labels):
-                    nonconform_score = compute_nonconformity_score(neighbors_labels[j, :].reshape(1, -1), label)
+                    nonconform_score = compute_nonconformity_score(neighbors_labels[j, :].reshape(1, -1), label, weights[j, :])
                     nonconformity_scores[i*self.args.eval_batch_size + j] = nonconform_score
                 progress_bar.update(1)
         if self.save_nonconform_scores_path is not None:
