@@ -17,11 +17,12 @@ from transformers import (
     default_data_collator,
     set_seed
 )
+from utils import randargmax
 from typing import Dict
 from SaveLogitsTrainer import SaveLogitsTrainer
 from data import train_val_test_split, read_data
 from args import DKNNArguments, DataArguments, ModelArguments
-from transformers.trainer_utils import get_last_checkpoint
+from transformers.trainer_utils import get_last_checkpoint, denumpify_detensorize, speed_metrics
 from datasets import load_metric, Dataset, load_dataset
 from NearestNeighborLogits import LogProbabilityLogitsFactory, ConformalLogitsFactory
 from NearestNeighborDistancesToWeightsFuncts import NearestNeighborDistancesToWeightsFuncts
@@ -39,9 +40,11 @@ import os
 import torch
 import logging
 import sys
+import math
 import datasets
 import transformers
 import random
+import time
 
 logger = logging.getLogger(__name__)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -267,7 +270,8 @@ def main():
     def compute_metrics(p: EvalPrediction) -> Dict[str, float]:
         computed_scores = {}
         preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
-        preds = np.argmax(preds, axis=1)
+        preds = randargmax(preds) # break ties arbitrarily
+        # preds = np.argmax(preds, axis=1)
         # see datasets.list_metrics() for the complete list
         for metric_desc in metric_descs:
             metric_func = load_metric(metric_desc)
@@ -458,20 +462,29 @@ def main():
         if data_args.compute_predict_results:
             test_labels = test_data["label"]
         test_data = test_data.remove_columns("label")
-        predictions = trainer.predict(test_data, metric_key_prefix="predict").predictions
+        prediction_output = trainer.predict(test_data, metric_key_prefix="predict")
+        predictions = prediction_output.predictions
         if isinstance(predictions, tuple) and len(predictions) != test_data.num_rows:
             # assume the first thing in the tuple is predictions, if it's multiple tensors
             predictions = predictions[0]
-        # predictions = np.argmax(predictions, axis=1) 
-        # I have abandoned argmax because it always break ties by selecting the first (smaller) index
-        predictions = np.random.choice(np.flatnonzero(predictions == predictions.max()))
+
         # compute results for test set (NOTE: this assumes that the test set also has labels)
         if data_args.compute_predict_results:
             p = EvalPrediction(predictions=predictions, label_ids=test_labels)
             predict_metrics = compute_metrics(p)
+            # To be JSON-serializable, we need to remove numpy types or zero-d tensors
+            predict_metrics = denumpify_detensorize(predict_metrics)
+            predict_metrics.update(prediction_output.metrics)
+            predict_metrics['predict_samples'] = len(test_data)
+            # Prefix all keys with metric_key_prefix + '_'
+            for key in list(predict_metrics.keys()):
+                if not key.startswith("predict_"):
+                    predict_metrics[f"predict_{key}"] = predict_metrics.pop(key)
             trainer.log_metrics("predict", predict_metrics)
             trainer.save_metrics("predict", predict_metrics)
 
+        # predictions = np.argmax(predictions, axis=1) 
+        predictions = randargmax(predictions) # break ties arbitrarily
         output_predict_file = os.path.join(training_args.output_dir, f"predict_results.txt")
         if trainer.is_world_process_zero():
             with open(output_predict_file, "w") as writer:

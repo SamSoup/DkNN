@@ -142,7 +142,7 @@ class DataArguments:
     compute_predict_results: Optional[bool] = field (
         default=False, metadata= {
             "help": "Should we also compute metrics for the prediction (test) set; if yes, then the"
-            "test set must contain valid labels"
+            "test set must contain valid labels and do_predict must be true"
         }
     )
     evaluation_metrics: Optional[List[str]] = field (
