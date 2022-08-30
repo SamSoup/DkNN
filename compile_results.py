@@ -54,6 +54,7 @@ def add_to_dataframe(df: pd.DataFrame, results: Dict[str, Union[str, float]]):
     new_row = { col: results[col] for col in df.columns }
     return pd.concat([df, pd.DataFrame(new_row, index=[0])], ignore_index = True)
 
+# USAGE: python3 compile_results.py <result locations> <output file name>
 result_files = sys.argv[1]
 output_file = sys.argv[2]
 

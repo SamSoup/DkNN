@@ -137,9 +137,9 @@ def main():
     if data_args.do_train_val_test_split:
         data = read_data(data_args.train_file)
         train_data, eval_data, test_data = train_val_test_split(
-            train_data, data_args.train_data_pct,
+            data, data_args.train_data_pct,
             data_args.eval_data_pct, data_args.test_data_pct,
-            data_args.shuffle_seed
+            training_args.seed
         )
     else:
         train_data = read_data(data_args.train_file)
@@ -263,7 +263,7 @@ def main():
 
     # Custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
     # predictions and label_ids field) and has to return a dictionary string to float.
-    metric_descs = ["accuracy", "f1", "precision", "recall"]
+    metric_descs = data_args.evaluation_metrics
     def compute_metrics(p: EvalPrediction) -> Dict[str, float]:
         computed_scores = {}
         preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
@@ -272,10 +272,11 @@ def main():
         for metric_desc in metric_descs:
             metric_func = load_metric(metric_desc)
             computed_scores[metric_desc] = metric_func.compute(predictions=preds, references=p.label_ids)[metric_desc]
-        # get per-class f1 too
-        f1_scores = load_metric("f1").compute(predictions=preds, references=p.label_ids, average=None)["f1"]
-        computed_scores["f1-negative"] = f1_scores[0]
-        computed_scores["f1-positive"] = f1_scores[1]
+        # get per-class f1 too, if we want f1
+        if "f1" in metric_descs:
+            f1_scores = load_metric("f1").compute(predictions=preds, references=p.label_ids, average=None)["f1"]
+            computed_scores["f1-negative"] = f1_scores[0]
+            computed_scores["f1-positive"] = f1_scores[1]
         return computed_scores
 
     # Data collator will default to DataCollatorWithPadding when the tokenizer is passed to Trainer, so we change it if
@@ -454,12 +455,22 @@ def main():
     if training_args.do_predict:
         logger.info("*** Predict ***")
         # Removing the `label` columns because it contains -1 and Trainer won't like that.
+        if data_args.compute_predict_results:
+            test_labels = test_data["label"]
         test_data = test_data.remove_columns("label")
         predictions = trainer.predict(test_data, metric_key_prefix="predict").predictions
         if isinstance(predictions, tuple) and len(predictions) != test_data.num_rows:
             # assume the first thing in the tuple is predictions, if it's multiple tensors
             predictions = predictions[0]
-        predictions = np.argmax(predictions, axis=1)
+        # predictions = np.argmax(predictions, axis=1) 
+        # I have abandoned argmax because it always break ties by selecting the first (smaller) index
+        predictions = np.random.choice(np.flatnonzero(predictions == predictions.max()))
+        # compute results for test set (NOTE: this assumes that the test set also has labels)
+        if data_args.compute_predict_results:
+            p = EvalPrediction(predictions=predictions, label_ids=test_labels)
+            predict_metrics = compute_metrics(p)
+            trainer.log_metrics("predict", predict_metrics)
+            trainer.save_metrics("predict", predict_metrics)
 
         output_predict_file = os.path.join(training_args.output_dir, f"predict_results.txt")
         if trainer.is_world_process_zero():
@@ -469,6 +480,10 @@ def main():
                 for index, item in enumerate(predictions):
                     item = label_list[item]
                     writer.write(f"{index}\t{item}\n")
+
+    # finally, save the data arguments and DKNN arguments 
+    torch.save(data_args, os.path.join(training_args.output_dir, "data_args.bin"))
+    torch.save(DKNN_args, os.path.join(training_args.output_dir, "DKNN_args.bin"))
 
 if __name__ == "__main__":
     main()

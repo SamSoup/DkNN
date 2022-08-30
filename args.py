@@ -139,6 +139,17 @@ class DataArguments:
     Using `HfArgumentParser` we can turn this class into argparse arguments to be able to specify 
     them on the command line. Structure follows from run_glue.py from Transformers.
     """
+    compute_predict_results: Optional[bool] = field (
+        default=False, metadata= {
+            "help": "Should we also compute metrics for the prediction (test) set; if yes, then the"
+            "test set must contain valid labels"
+        }
+    )
+    evaluation_metrics: Optional[List[str]] = field (
+        default_factory=list, metadata = {
+            "help": "A list of evaluation to use."
+        }
+    )
     max_seq_length: int = field(
         default=1024,
         metadata={
@@ -211,11 +222,6 @@ class DataArguments:
     )
     overwrite_cache: bool = field(
         default=False, metadata={"help": "Overwrite the cached preprocessed datasets or not."}
-    )
-    shuffle_seed : Optional[int] = field (
-        default = 42, metadata = {
-            "help": "The random seed for shuffling rows during train-val-test split."
-        }
     )
     input_key: str = field (
         default = "input", metadata = {
