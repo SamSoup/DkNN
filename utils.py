@@ -1,18 +1,22 @@
-from typing import Union, Any, Mapping, Dict, List, Optional, Tuple
+from typing import Iterable, Union, Any, Mapping, Dict, List, Optional, Tuple
 from transformers import (
     PreTrainedModel,
     TrainingArguments
 )
+import random
 from transformers.utils import find_labels, ModelOutput
-from datasets import Dataset
 from packaging import version
 import datasets
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 import inspect
 import re
 import os
+
+def random_dropOut(x: Iterable[any], probability: float) -> Iterable[any]:
+    return [ item for item in x if random.random() <= probability ]
 
 def randargmax(logits: np.ndarray) -> np.ndarray:
     """
@@ -81,6 +85,22 @@ def get_layer_representations(hidden_states: torch.tensor) -> torch.tensor:
     # average across all tokens to obtain embedding -> (batch_size, embedding_dim)
     return torch.mean(hidden_states, dim=1).squeeze().detach().cpu()
 
+def get_pooled_layer_representations(hidden_states: torch.tensor, attention_mask: torch.tensor) -> torch.tensor:
+    """
+    Obtain the layer representations by averaging across all tokens with respect to the attention mask 
+    to obtain the embedding at sentence level (for now).
+    Args:
+        hidden_states (torch.tensor): the hidden states from the model for one layer, with shape
+        (batch_size, max_seq_len, embedding_dim)
+        attention_mask (torch.tensor): the binary attention mask of shape
+        (batch_size, num_heads, sequence_length, sequence_length)
+
+    Returns:
+        torch.tensor: (batch_size, self.layer_dim) of layer representations in order
+    """
+    input_mask_expanded = attention_mask.unsqueeze(-1).expand(hidden_states.size()).float()
+    return F.normalize(torch.sum(hidden_states * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9), dim=0)
+
 def compute_nonconformity_score(neighbors: np.ndarray, label_id: int, weights: np.ndarray) -> np.ndarray:
     """
     We compute the non-conformity score for each example in the evaluation dataset as:
@@ -123,6 +143,26 @@ def compute_credibility(empirical_p: np.ndarray) -> np.ndarray:
         np.ndarray: the credibility scores for each example (row)
     """
     return empirical_p.max(axis=1)
+
+def compute_instance_level_brier(probs: np.ndarray, labels: np.ndarray) -> np.ndarray:
+    labels = np.zeros(probs.shape)
+    labels[:, 1] = 1
+     # the element at the 0th and 1th column is the same
+    return np.square(np.subtract(probs, labels))[:, 0]
+
+def compute_brier_score(probs: np.ndarray, labels: np.ndarray) -> float:
+    """
+    We compute the brier score of a set of predictions as the sum of squares 
+    between prediction probability for the positive class and the actual (binary) label
+
+    Args:
+        probs (np.ndarray): (eval_batch_size, len(self.label_list))
+        labels (np.ndarray): (eval_batch_size)
+    Returns:
+        float: the brier score in [0, 1]
+    """
+    return np.mean(compute_instance_level_brier(probs, labels))
+    # return np.sum(np.square(probs[:, 1] - labels)) / labels.shape[0]
 
 def convert_boolean_array_to_str(arr: np.ndarray) -> Tuple[str, List[str]]:
     string_rep = re.sub("[\[\] ]", "", np.array2string(arr.astype(int), 
@@ -225,11 +265,11 @@ def prepare_inputs(inputs: Dict[str, Union[torch.Tensor, Any]],
         )
     return inputs
 
-def remove_unused_columns(dataset: Dataset, 
+def remove_unused_columns(dataset: datasets.Dataset, 
                            model: Union[PreTrainedModel, nn.Module],
                            remove_unused_columns: bool,
                            signature_columns: List[str], 
-                           description: Optional[str] = None) -> Dataset:
+                           description: Optional[str] = None) -> datasets.Dataset:
     """
     Trainer's internal function that drops extraenous keys from the dataset, taken directly from
     Transformers.Trainer with slight modifications

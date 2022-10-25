@@ -1,0 +1,14 @@
+[
+    {
+        "Dataset": "toxigen",
+        "Model": "Bart-large",
+        "output_dir": "./output/toxigen/bart-large-1",
+        "data_dir": "./data/toxigen"
+    },
+    {
+        "Dataset": "toxigen",
+        "Model": "DeBerta-large",
+        "output_dir": "./output/toxigen/deberta-v3-large-1",
+        "data_dir": "./data/toxigen"
+    }
+]

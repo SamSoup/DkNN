@@ -191,6 +191,11 @@ def main():
         use_auth_token=True if model_args.use_auth_token else None,
         ignore_mismatched_sizes=ignore_mismatched_sizes
     )
+    
+    if model_args.freeze_base_model_params:
+        for name, param in model.named_parameters():
+            if 'classification_head' not in name and 'classifier' not in name: # freeze all besides classifier layer
+                param.requires_grad = False
 
     # Padding strategy
     if data_args.pad_to_max_length:

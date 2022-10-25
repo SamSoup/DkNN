@@ -15,7 +15,8 @@ from utils import (
     prepare_inputs, 
     remove_unused_columns, 
     get_hidden_states,
-    hidden_states_to_cpu
+    hidden_states_to_cpu,
+    get_pooled_layer_representations
 )
 from NearestNeighborFinders import AbstractNearestNeighbor
 import torch
@@ -44,7 +45,7 @@ class ComputeAndSaveConformalScoresTrainer:
         save_nonconform_scores_path: Optional[str] = None
     ):
         torch.cuda.empty_cache() # save memory before iterating through dataset
-        print(torch.cuda.memory_summary())
+        # print(torch.cuda.memory_summary())
         self.model = model
         self.args = args
         self.caliberation_dataset = caliberation_dataset
@@ -81,10 +82,11 @@ class ComputeAndSaveConformalScoresTrainer:
             for i, batch in enumerate(eval_dataloader):
                 inputs = prepare_inputs(batch, self._signature_columns, self.args.device)
                 labels = inputs.pop("labels").cpu().numpy()
+                attention_mask = inputs["attention_mask"]
                 outputs = self.model(**inputs, output_hidden_states=True)
-                hidden_states = get_hidden_states(self.model.config.is_encoder_decoder, outputs)
-                hidden_states = hidden_states_to_cpu(hidden_states)
-                distances, neighbors_labels, _ = self.nearestNeighborFunction.nearest_neighbors(hidden_states)
+                hidden_states = hidden_states_to_cpu(get_hidden_states(self.model.config.is_encoder_decoder, outputs))
+                layer_reps = tuple(map(get_pooled_layer_representations, hidden_states, attention_mask))
+                distances, neighbors_labels, _ = self.nearestNeighborFunction.nearest_neighbors(layer_reps)
                 weights = self.dist_to_weight_fct(distances)
                 for j, label in enumerate(labels):
                     nonconform_score = compute_nonconformity_score(neighbors_labels[j, :].reshape(1, -1), label, weights[j, :])

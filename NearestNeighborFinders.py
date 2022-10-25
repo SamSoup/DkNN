@@ -5,7 +5,6 @@ from sklearn.metrics import DistanceMetric
 from sklearn.metrics.pairwise import pairwise_distances
 from tqdm.auto import tqdm
 from itertools import combinations
-from utils import get_layer_representations
 import numpy as np
 import torch
 import abc
@@ -33,13 +32,13 @@ class AbstractNearestNeighbor(abc.ABC):
         self.layer_dim = layer_dim
 
     @abc.abstractmethod
-    def nearest_neighbors(self, hidden_states: Tuple[torch.tensor], output_neighbor_id: bool=False) -> np.ndarray:
+    def nearest_neighbors(self, layer_reps: Tuple[torch.tensor], output_neighbor_id: bool=False) -> np.ndarray:
         """
         Given a batch of input example tensors, return the k nearest neighbor per layer
         Original reference: Andoni et. al. https://arxiv.org/pdf/1509.02897.pdf
 
         Args:
-            hidden_states (Tuple[torch.tensor]): (num_layers+1, batch_size, max_seq_len, embedding_dim)
+            layer_reps (Tuple[torch.tensor]): (num_layers+1, batch_size, embedding_dim)
 
         Returns:
             np.ndarray: the collection of neighbors (col) per example (row)
@@ -56,13 +55,13 @@ class KDTreeNearestNeighbor(AbstractNearestNeighbor):
                 for layer in self.layers_to_save
         }
 
-    def nearest_neighbors(self, hidden_states: Tuple[torch.tensor], output_neighbor_id: bool=False) -> Tuple[np.ndarray]:
+    def nearest_neighbors(self, layer_reps: Tuple[torch.tensor], output_neighbor_id: bool=False) -> Tuple[np.ndarray]:
         # print("***** Running DkNN - Nearest Neighbor Search (One Batch) KD Tree *****")
         # for each example in the batch, find their total list of neighbors
         # the batch size may be not equivalent to self.args.eval_batch_size, if the 
         # number of training examples is *not* an exact multiple of self.args.eval_batch_size
         # so we use the first layer hidden state's first dimension (presumed batch size)
-        neighbors = np.zeros((hidden_states[0].shape[0], len(self.layers_to_save) * self.K))
+        neighbors = np.zeros((layer_reps[0].shape[0], len(self.layers_to_save) * self.K))
         distances = np.zeros(neighbors.shape)
         neighbor_ids = None
         if output_neighbor_id:
@@ -70,7 +69,7 @@ class KDTreeNearestNeighbor(AbstractNearestNeighbor):
         # progress_bar = tqdm(range(len(self.layers_to_save)))
         for l, layer in enumerate(self.layers_to_save):
             tree = self.trees[layer]
-            dist, batch_indices = tree.query(get_layer_representations(hidden_states[layer]), k=self.K) # (batch_size, K)
+            dist, batch_indices = tree.query(layer_reps[layer], k=self.K) # (batch_size, K)
             # based on idx, look up tag in database per batch of example
             for i, neighbor_indices in enumerate(batch_indices):
                 labels = self.database[layer][neighbor_indices][:, -1] # label is the last element of the 2d np array
@@ -101,15 +100,14 @@ class LocalitySensitiveHashingNearestNeighbor(AbstractNearestNeighbor):
         end = time.time()
         print(f"Initializing tables took {end - start}")
 
-    def nearest_neighbors(self, hidden_states: Tuple[torch.tensor], output_neighbor_id: bool=False) -> np.ndarray:
-        batch_size = hidden_states[0].shape[0]
-        neighbors = np.zeros((batch_size, len(self.layers_to_save) * self.K))
+    def nearest_neighbors(self, layer_reps: Tuple[torch.tensor], output_neighbor_id: bool=False) -> np.ndarray:
+        neighbors = np.zeros((layer_reps[0].shape[0], len(self.layers_to_save) * self.K))
         distances = np.zeros(neighbors.shape)
         neighbor_ids = None
         if output_neighbor_id:
             neighbor_ids = np.zeros(neighbors.shape)
         for l, layer in enumerate(self.layers_to_save):
-            hidden_state_batch = get_layer_representations(hidden_states[layer]).cpu().detach().numpy()
+            hidden_state_batch = layer_reps[layer]
             for i, h in enumerate(hidden_state_batch):
                 # res = self.query_tables[layer].query(h, num_results=self.K, distance_func=l2norm)
                 res = self.query_tables[layer].query(h, num_results=self.K, distance_func=self.dist_metric)
@@ -206,14 +204,13 @@ class LocalitySensitiveHashingNearestNeighborCustom(AbstractNearestNeighbor):
         # print(f"A batch of nearest neighbor candidates took {end - start}")
         return candidate_sets
 
-    def nearest_neighbors(self, hidden_states: Tuple[torch.tensor], output_neighbor_id: bool=False) -> np.ndarray:
-        batch_size = hidden_states[0].shape[0]
-        neighbors = np.zeros((batch_size, len(self.layers_to_save) * self.K))
+    def nearest_neighbors(self, layer_reps: Tuple[torch.tensor], output_neighbor_id: bool=False) -> np.ndarray:
+        neighbors = np.zeros((layer_reps[0].shape[0], len(self.layers_to_save) * self.K))
         neighbor_ids = None
         if output_neighbor_id:
             neighbor_ids = np.zeros(neighbors.shape)
         for l, layer in enumerate(self.layers_to_save):
-            hidden_state_batch = get_layer_representations(hidden_states[layer]).cpu().detach().numpy()
+            hidden_state_batch = layer_reps[layer]
             candidate_sets = self.find_candidate_sets(hidden_state_batch, layer)
             for candidate_set in candidate_sets:
                 labels = self.database[layer][candidate_set][:,-1]
@@ -222,7 +219,7 @@ class LocalitySensitiveHashingNearestNeighborCustom(AbstractNearestNeighbor):
                     self.database[layer][candidate_set][:, :self.layer_dim], 
                     metric=self.dist_metric,
                     n_jobs=64
-                ) # (batch_size, len(candidate_sets[i]))
+                ) # (batch_size=layer_reps[0].shape[0], len(candidate_sets[i]))
                 for i, distances in enumerate(distances_batch):
                     indices = np.argsort(distances)
                     distances_batch[i, :] = distances_batch[i, :][indices]

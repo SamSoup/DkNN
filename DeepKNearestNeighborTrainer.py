@@ -17,7 +17,12 @@ from transformers.trainer_utils import PredictionOutput
 from transformers.trainer_pt_utils import nested_detach
 from typing import Callable, Union, Optional, Dict, List, Tuple, Any
 from SaveLogitsTrainer import SaveLogitsTrainer
-from utils import get_hidden_states, hidden_states_to_cpu, find_signature_columns, remove_file_if_already_exists, remove_unused_columns, save_matrix_with_tags_to_file
+from utils import (
+    get_hidden_states, hidden_states_to_cpu, 
+    find_signature_columns, remove_file_if_already_exists, 
+    remove_unused_columns, save_matrix_with_tags_to_file,
+    get_pooled_layer_representations
+)
 from DeepKNearestNeighborClassifier import DeepKNearestNeighborClassifier
 from datasets import Dataset
 from packaging import version
@@ -66,6 +71,7 @@ class DeepKNearestNeighborTrainer(SaveLogitsTrainer):
                      labels: torch.Tensor, model: nn.Module) -> Dict[str, torch.Tensor]:
         if self.save_logits or self.output_and_save_neighbor_ids:
             tags = inputs.pop("tag").cpu().detach().numpy()
+        attention_mask = inputs["attention_mask"]
         outputs = model(**inputs, output_hidden_states=True)
         is_encoder_decoder = (model.module.config.is_encoder_decoder if type(model) == nn.parallel.DataParallel 
                             else model.config.is_encoder_decoder)
@@ -73,11 +79,12 @@ class DeepKNearestNeighborTrainer(SaveLogitsTrainer):
         # NOTE: hidden_states occpuy a LOT of cuda memory, so we need to 
         # delete them from the GPU immediately after retrieval
         hidden_states = hidden_states_to_cpu(hidden_states)
+        layer_reps = tuple(map(get_pooled_layer_representations, hidden_states, attention_mask))
         torch.cuda.empty_cache()
         if labels is not None and labels.dtype is torch.bool:
             labels = labels.type(torch.LongTensor).to(self.args.device)
         loss, logits, neighbor_ids = self.classifier.compute_loss_and_logits(
-            hidden_states, labels, self.args.device, self.output_and_save_neighbor_ids
+            layer_reps, labels, self.args.device, self.output_and_save_neighbor_ids
         )
         # save the metadatas, if we should - logits, neighbors
         if self.save_logits:

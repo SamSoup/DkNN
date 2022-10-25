@@ -279,7 +279,6 @@ class ModelArguments:
     Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
     Structure follows from run_glue.py from Transformers.
     """
-
     model_name_or_path: str = field(
         metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
@@ -288,6 +287,9 @@ class ModelArguments:
     )
     tokenizer_name: Optional[str] = field(
         default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
+    )
+    freeze_base_model_params: Optional[bool] = field (
+        default=False, metadata={"help": "Should we freeze the base model parameters and only train classification layer?"}
     )
     cache_dir: Optional[str] = field(
         default=None,

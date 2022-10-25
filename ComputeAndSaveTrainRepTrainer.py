@@ -9,7 +9,7 @@ from datasets import Dataset
 from typing import Optional, Union, List, Dict
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
-from utils import get_layer_representations, find_signature_columns, prepare_inputs, remove_unused_columns, get_hidden_states
+from utils import get_layer_representations, find_signature_columns, prepare_inputs, remove_unused_columns, get_hidden_states, get_pooled_layer_representations
 import torch
 import torch.nn as nn
 import numpy as np
@@ -48,7 +48,6 @@ class ComputeAndSaveTrainRepTrainer:
         self.save_database_path = save_database_path
         self._signature_columns = find_signature_columns(model, args)
         self._signature_columns += ["tag"] # also keep tag in training dataset only
-        
 
     def compute_and_save_training_points_representations(self) -> Dict[int, np.ndarray]:
         """
@@ -86,15 +85,17 @@ class ComputeAndSaveTrainRepTrainer:
             inputs = prepare_inputs(batch, self._signature_columns, self.args.device)
             tags = inputs.pop("tag").cpu().numpy()
             labels = inputs.pop("labels").cpu().numpy()
+            attention_mask = inputs["attention_mask"]
             with torch.no_grad():
                 outputs = self.model(**inputs, output_hidden_states=True)
             hidden_states = get_hidden_states(self.model.config.is_encoder_decoder, outputs)
             # Hidden-states of the model = the initial embedding outputs + the output of each layer                            
             # filter representations to what we need: (num_layers+1, batch_size, max_seq_len, embedding_dim)
             for layer in self.layers_to_save:
-                layer_rep_np = get_layer_representations(hidden_states[layer])
+                # layer_rep_np = get_layer_representations(hidden_states[layer])
+                layer_rep_np = get_pooled_layer_representations(hidden_states[layer], attention_mask)
                 layer_rep_np = np.concatenate(
-                    (layer_rep_np, tags.reshape(-1, 1), labels.reshape(-1, 1)), axis=1)     # (batch_size, embedding_dim + 2)
+                    (layer_rep_np, tags.reshape(-1, 1), labels.reshape(-1, 1)), axis=1) # (batch_size, embedding_dim + 2)
                 database[layer] = (np.append(database[layer], layer_rep_np, axis=0) 
                                    if database[layer] is not None else layer_rep_np)
             progress_bar.update(1)
