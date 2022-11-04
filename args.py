@@ -46,7 +46,7 @@ class DKNNArguments:
         }
     )
     layers_to_save_desc: Optional[str] = field (
-        default_factory=None, metadata = {
+        default=None, metadata = {
             "help": "A simplified word description of the meaning of the layers to save"
         }
     )
@@ -57,7 +57,7 @@ class DKNNArguments:
         }
     )
     poolers_to_use_desc: Optional[List[str]] = field (
-        default_factory=None, metadata = {
+        default=None, metadata = {
             "help": "A simplified word description of the meaning of the poolers to use"
         }
     )

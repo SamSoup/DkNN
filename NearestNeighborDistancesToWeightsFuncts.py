@@ -20,6 +20,9 @@ class NearestNeighborDistancesToWeightsFuncts:
             "uniform": self.uniform
         }
 
+    def standardize_weights(self, weights: np.ndarray):
+        return weights / np.tile(weights.sum(axis=1), (weights.shape[1], 1)).T
+
     def uniform(self, distances: np.ndarray):
         return np.ones(distances.shape)
 
@@ -30,10 +33,13 @@ class NearestNeighborDistancesToWeightsFuncts:
         pass
 
     def inverse(self, distances: np.ndarray):
-        return 1 / (distances + 1e-8)
-    
+        # normalize for each example
+        weights = 1 / (distances + 1e-8) 
+        return self.standardize_weights(weights)
+
     def inverse_squared(self, distances: np.ndarray):
-        return 1 / (np.square(distances) + 1e-8)
+        weights = 1 / (np.square(distances) + 1e-8)
+        return self.standardize_weights(weights)
 
     # def rank_weight(self, distances: np.ndarray):
     #     return distances.shape[1] - 
