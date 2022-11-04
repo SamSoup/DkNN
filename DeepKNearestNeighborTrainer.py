@@ -52,6 +52,8 @@ class DeepKNearestNeighborTrainer(SaveLogitsTrainer):
         optimizers: Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR] = (None, None),
         preprocess_logits_for_metrics: Callable[[torch.Tensor, torch.Tensor], torch.Tensor] = None,
         save_logits: bool = False,
+        layers_to_save: List[int] = None,
+        poolers: List[Callable[[torch.tensor], torch.tensor]] = None,
         classifier: DeepKNearestNeighborClassifier = None,
         output_and_save_neighbor_ids: bool = False,        
     ):
@@ -62,6 +64,8 @@ class DeepKNearestNeighborTrainer(SaveLogitsTrainer):
                          model_init, compute_metrics, callbacks, optimizers, 
                          preprocess_logits_for_metrics, save_logits)
         torch.cuda.empty_cache() # save memory before iterating through dataset
+        self.layers_to_save = layers_to_save
+        self.poolers = poolers
         self.classifier = classifier
         self.output_and_save_neighbor_ids = output_and_save_neighbor_ids
         self._signature_columns = find_signature_columns(model, args)
@@ -78,8 +82,9 @@ class DeepKNearestNeighborTrainer(SaveLogitsTrainer):
         hidden_states = get_hidden_states(is_encoder_decoder, outputs)
         # NOTE: hidden_states occpuy a LOT of cuda memory, so we need to 
         # delete them from the GPU immediately after retrieval
-        hidden_states = hidden_states_to_cpu(hidden_states)
-        layer_reps = tuple(map(get_pooled_layer_representations, hidden_states, attention_mask))
+        layer_reps = {}
+        for l, pooler in zip(self.layers_to_save, self.poolers):
+            layer_reps[l] = pooler(hidden_states[l], attention_mask)
         torch.cuda.empty_cache()
         if labels is not None and labels.dtype is torch.bool:
             labels = labels.type(torch.LongTensor).to(self.args.device)

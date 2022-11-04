@@ -6,7 +6,7 @@ from transformers import (
 )
 from transformers.data.data_collator import default_data_collator, DataCollatorWithPadding
 from datasets import Dataset
-from typing import Optional, Union, Callable
+from typing import Optional, Union, Callable, List
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from utils import ( 
@@ -39,6 +39,8 @@ class ComputeAndSaveConformalScoresTrainer:
         caliberation_dataset: Optional[Dataset] = None,
         data_collator: Optional[DataCollator] = None,
         tokenizer: Optional[PreTrainedTokenizerBase] = None,
+        layers_to_save: List[int] = None,
+        poolers: List[Callable[[torch.tensor], torch.tensor]] = None,
         nearestNeighborFunction: AbstractNearestNeighbor = None,
         dist_to_weight_fct: Callable[[np.ndarray], np.ndarray] = None,
         read_from_scores_path: bool = False,
@@ -51,6 +53,8 @@ class ComputeAndSaveConformalScoresTrainer:
         self.caliberation_dataset = caliberation_dataset
         default_collator = default_data_collator if tokenizer is None else DataCollatorWithPadding(tokenizer)
         self.data_collator = data_collator if data_collator is not None else default_collator
+        self.layers_to_save = layers_to_save
+        self.poolers = poolers
         self.nearestNeighborFunction = nearestNeighborFunction
         self.dist_to_weight_fct = dist_to_weight_fct
         self.read_from_scores_path = read_from_scores_path
@@ -84,8 +88,10 @@ class ComputeAndSaveConformalScoresTrainer:
                 labels = inputs.pop("labels").cpu().numpy()
                 attention_mask = inputs["attention_mask"]
                 outputs = self.model(**inputs, output_hidden_states=True)
-                hidden_states = hidden_states_to_cpu(get_hidden_states(self.model.config.is_encoder_decoder, outputs))
-                layer_reps = tuple(map(get_pooled_layer_representations, hidden_states, attention_mask))
+                hidden_states = get_hidden_states(self.model.config.is_encoder_decoder, outputs)
+                layer_reps = {}
+                for l, pooler in zip(self.layers_to_save, self.poolers):
+                    layer_reps[l] = pooler(hidden_states[l], attention_mask)
                 distances, neighbors_labels, _ = self.nearestNeighborFunction.nearest_neighbors(layer_reps)
                 weights = self.dist_to_weight_fct(distances)
                 for j, label in enumerate(labels):

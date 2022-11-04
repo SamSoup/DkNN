@@ -11,6 +11,7 @@ data/
 OLD/
 trial_configurations/
 .cache
+.vscode
 
 # test notebooks
 *.ipynb_checkpoints/

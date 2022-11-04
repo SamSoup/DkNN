@@ -41,8 +41,9 @@ def compute_confidence_from_matrix(labels: np.ndarray, logits: np.ndarray, is_DK
     # 75% confidence in predicting the positive class on a give
     # example gets a reward of 0.75 if gold is positive, and 0.25 if gold is negative ??
     # note that confidence (from probability will never be below 0.5)
-    overall_reward = ((predicts == labels).astype(int) * probs[range(len(probs)), predicts] + 
-                      (predicts != labels).astype(int) * probs[range(len(probs)), labels])
+    indices = range(len(probs))
+    overall_reward = ((predicts == labels).astype(int) * probs[indices, predicts] + 
+                      (predicts != labels).astype(int) * probs[indices, labels])
     overall_reward = sum(overall_reward) / len(overall_reward)
     return overall_reward
 

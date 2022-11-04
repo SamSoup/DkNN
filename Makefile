@@ -1,3 +1,11 @@
+start:
+	cd /work/06782/ysu707/ls6/DkNN
+	source /work/06782/ysu707/ls6/conda/etc/profile.d/conda.sh
+
+dev-maverick:
+	idev -m 120 -p gtx
+	conda activate DkNN
+
 dev:
 	idev -m 120 -p gpu-a100
 	conda activate DkNN

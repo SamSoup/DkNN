@@ -6,7 +6,7 @@ from transformers import (
 )
 from transformers.data.data_collator import default_data_collator, DataCollatorWithPadding
 from datasets import Dataset
-from typing import Optional, Union, List, Dict
+from typing import Optional, Union, List, Dict, Callable
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from utils import get_layer_representations, find_signature_columns, prepare_inputs, remove_unused_columns, get_hidden_states, get_pooled_layer_representations
@@ -33,7 +33,8 @@ class ComputeAndSaveTrainRepTrainer:
         train_dataset: Optional[Dataset] = None,
         data_collator: Optional[DataCollator] = None,
         tokenizer: Optional[PreTrainedTokenizerBase] = None,
-        layers_to_save: List[int] = [],
+        layers_to_save: List[int] = None,
+        poolers: List[Callable[[torch.tensor], torch.tensor]] = None,
         read_from_database_path: bool = False,
         save_database_path: Optional[str] = None,
     ):
@@ -42,8 +43,10 @@ class ComputeAndSaveTrainRepTrainer:
         self.args = args
         self.train_dataset = train_dataset
         default_collator = default_data_collator if tokenizer is None else DataCollatorWithPadding(tokenizer)
+        self.tokenizer = tokenizer
         self.data_collator = data_collator if data_collator is not None else default_collator
         self.layers_to_save = layers_to_save
+        self.poolers = poolers
         self.read_from_database_path = read_from_database_path
         self.save_database_path = save_database_path
         self._signature_columns = find_signature_columns(model, args)
@@ -91,9 +94,8 @@ class ComputeAndSaveTrainRepTrainer:
             hidden_states = get_hidden_states(self.model.config.is_encoder_decoder, outputs)
             # Hidden-states of the model = the initial embedding outputs + the output of each layer                            
             # filter representations to what we need: (num_layers+1, batch_size, max_seq_len, embedding_dim)
-            for layer in self.layers_to_save:
-                # layer_rep_np = get_layer_representations(hidden_states[layer])
-                layer_rep_np = get_pooled_layer_representations(hidden_states[layer], attention_mask)
+            for layer, pooler in zip(self.layers_to_save, self.poolers):
+                layer_rep_np = pooler(hidden_states[layer], attention_mask)
                 layer_rep_np = np.concatenate(
                     (layer_rep_np, tags.reshape(-1, 1), labels.reshape(-1, 1)), axis=1) # (batch_size, embedding_dim + 2)
                 database[layer] = (np.append(database[layer], layer_rep_np, axis=0) 

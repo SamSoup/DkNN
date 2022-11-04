@@ -99,7 +99,7 @@ def get_pooled_layer_representations(hidden_states: torch.tensor, attention_mask
         torch.tensor: (batch_size, self.layer_dim) of layer representations in order
     """
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(hidden_states.size()).float()
-    return F.normalize(torch.sum(hidden_states * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9), dim=0)
+    return F.normalize(torch.sum(hidden_states * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9), dim=0).squeeze().detach().cpu()
 
 def compute_nonconformity_score(neighbors: np.ndarray, label_id: int, weights: np.ndarray) -> np.ndarray:
     """

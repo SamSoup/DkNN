@@ -32,7 +32,7 @@ class AbstractNearestNeighbor(abc.ABC):
         self.layer_dim = layer_dim
 
     @abc.abstractmethod
-    def nearest_neighbors(self, layer_reps: Tuple[torch.tensor], output_neighbor_id: bool=False) -> np.ndarray:
+    def nearest_neighbors(self, layer_reps: Dict[int, torch.tensor], output_neighbor_id: bool=False) -> np.ndarray:
         """
         Given a batch of input example tensors, return the k nearest neighbor per layer
         Original reference: Andoni et. al. https://arxiv.org/pdf/1509.02897.pdf
@@ -55,13 +55,14 @@ class KDTreeNearestNeighbor(AbstractNearestNeighbor):
                 for layer in self.layers_to_save
         }
 
-    def nearest_neighbors(self, layer_reps: Tuple[torch.tensor], output_neighbor_id: bool=False) -> Tuple[np.ndarray]:
+    def nearest_neighbors(self, layer_reps: Dict[int, torch.tensor], output_neighbor_id: bool=False) -> Tuple[np.ndarray]:
         # print("***** Running DkNN - Nearest Neighbor Search (One Batch) KD Tree *****")
         # for each example in the batch, find their total list of neighbors
         # the batch size may be not equivalent to self.args.eval_batch_size, if the 
         # number of training examples is *not* an exact multiple of self.args.eval_batch_size
         # so we use the first layer hidden state's first dimension (presumed batch size)
-        neighbors = np.zeros((layer_reps[0].shape[0], len(self.layers_to_save) * self.K))
+        batch_size = next(iter(layer_reps.values())).shape[0] # ugly but works
+        neighbors = np.zeros((batch_size, len(self.layers_to_save) * self.K))
         distances = np.zeros(neighbors.shape)
         neighbor_ids = None
         if output_neighbor_id:
@@ -100,8 +101,9 @@ class LocalitySensitiveHashingNearestNeighbor(AbstractNearestNeighbor):
         end = time.time()
         print(f"Initializing tables took {end - start}")
 
-    def nearest_neighbors(self, layer_reps: Tuple[torch.tensor], output_neighbor_id: bool=False) -> np.ndarray:
-        neighbors = np.zeros((layer_reps[0].shape[0], len(self.layers_to_save) * self.K))
+    def nearest_neighbors(self, layer_reps: Dict[int, torch.tensor], output_neighbor_id: bool=False) -> np.ndarray:
+        batch_size = next(iter(layer_reps.values())).shape[0] # ugly but works
+        neighbors = np.zeros((batch_size, len(self.layers_to_save) * self.K))
         distances = np.zeros(neighbors.shape)
         neighbor_ids = None
         if output_neighbor_id:

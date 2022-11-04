@@ -10,6 +10,8 @@ from typing import Optional, List
 import numpy as np
 import os
 
+from NearestNeighborDistancesToWeightsFuncts import NearestNeighborDistancesToWeightsFuncts
+
 @dataclass
 class DKNNArguments:
     """
@@ -41,7 +43,22 @@ class DKNNArguments:
     layers_to_save: Optional[List[int]] = field (
         default_factory=list, metadata = {
             "help": "A list of layers to save its representation for (DkNN only) in python list format;"
-            "by default no layers are saved."
+        }
+    )
+    layers_to_save_desc: Optional[str] = field (
+        default_factory=None, metadata = {
+            "help": "A simplified word description of the meaning of the layers to save"
+        }
+    )
+    poolers_to_use: Optional[List[str]] = field (
+        default_factory=list, metadata = {
+            "help": "A list of pooler methods to use to save its representation for (DkNN only) in python list format;"
+            "Must have matching length with layers_to_save"
+        }
+    )
+    poolers_to_use_desc: Optional[List[str]] = field (
+        default_factory=None, metadata = {
+            "help": "A simplified word description of the meaning of the poolers to use"
         }
     )
     read_from_database_path: bool = field (
@@ -100,7 +117,7 @@ class DKNNArguments:
 
     def __post_init__(self):
         self.neighbor_methods = {"KD-Tree", "LSH"}
-        self.prediction_methods = {"normal", "conformal"}
+        self.prediction_methods = {"nonconformal", "conformal"}
         self.dist_metrics = {"minkowski", "cosine"}
         if self.do_DKNN:
             assert(

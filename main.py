@@ -32,6 +32,7 @@ from ComputeAndSaveTrainRepTrainer import ComputeAndSaveTrainRepTrainer
 from ComputeAndSaveConformalScoresTrainer import ComputeAndSaveConformalScoresTrainer
 from DeepKNearestNeighborTrainer import DeepKNearestNeighborTrainer
 from CustomLossTrainer import CustomLossTrainer
+from EmbeddingPooler import EmbeddingPooler
 from sklearn.metrics import DistanceMetric
 from sklearn.metrics.pairwise import cosine_distances
 import numpy as np
@@ -191,7 +192,7 @@ def main():
         use_auth_token=True if model_args.use_auth_token else None,
         ignore_mismatched_sizes=ignore_mismatched_sizes
     )
-    
+
     if model_args.freeze_base_model_params:
         for name, param in model.named_parameters():
             if 'classification_head' not in name and 'classifier' not in name: # freeze all besides classifier layer
@@ -361,6 +362,10 @@ def main():
 
     # DKNN
     if DKNN_args.do_DKNN:
+        # get the poolers for the hidden states
+        p = EmbeddingPooler()
+        poolers = list(map(p.get, DKNN_args.poolers_to_use))
+
         # first, we compute the representations for all training examples
         saveTrainRepTrainer = ComputeAndSaveTrainRepTrainer(
             model=model,
@@ -369,6 +374,7 @@ def main():
             tokenizer=tokenizer,
             train_dataset=train_data,
             layers_to_save=DKNN_args.layers_to_save,
+            poolers = poolers,
             read_from_database_path=DKNN_args.read_from_database_path,
             save_database_path=DKNN_args.save_database_path,
         )
@@ -402,10 +408,13 @@ def main():
         nearestNeighborFinderFunction = nearestNeighborFactory.createNearestNeighborFunction()
 
         # specify the conversion from distances to weight method
-        dist_to_weight_fct = NearestNeighborDistancesToWeightsFuncts(DKNN_args.K).get(DKNN_args.dist_to_weight_fct)
+        dist_to_weight_fct = NearestNeighborDistancesToWeightsFuncts(DKNN_args.K)
+        if DKNN_args.dist_to_weight_fct not in dist_to_weight_fct.name_to_fct:
+            raise ValueError("Unexpected Distances to Weights Function")
+        dist_to_weight_fct = dist_to_weight_fct.get(DKNN_args.dist_to_weight_fct)
 
         # create the NearestNeighborLogit Function
-        if DKNN_args.prediction_method == "normal":
+        if DKNN_args.prediction_method == "nonconformal":
             logitsFactory = LogProbabilityLogitsFactory(label_list)
         elif DKNN_args.prediction_method == "conformal":
             # compute the conformal socres first
@@ -414,6 +423,8 @@ def main():
                 args=training_args,
                 caliberation_dataset=eval_data,
                 data_collator=data_collator,
+                layers_to_save=DKNN_args.layers_to_save,
+                poolers = poolers,
                 tokenizer=tokenizer,
                 nearestNeighborFunction=nearestNeighborFinderFunction,
                 dist_to_weight_fct=dist_to_weight_fct,
@@ -444,6 +455,8 @@ def main():
             data_collator=data_collator,
             tokenizer=tokenizer,
             compute_metrics=compute_metrics,
+            layers_to_save=DKNN_args.layers_to_save,
+            poolers = poolers,
             classifier=classifier,
             save_logits=data_args.save_logits,
             output_and_save_neighbor_ids=DKNN_args.output_and_save_neighbor_ids
