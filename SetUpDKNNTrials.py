@@ -59,7 +59,7 @@ def get_actual_poolers_to_save(pooler_config: str, layers_to_save: List[int]):
     return switcher[pooler_config]
 
 trials = {
-    'prediction_method': ["nonconformal", "normal"], # always run conformal before normal
+    'prediction_method': ["nonconformal", "conformal"], # always run conformal before normal
     'layers_to_save_desc': possible_layer_configs,
     'poolers_to_use_desc': possible_pooler_configs,
     'K': list(range(1, 10, 2)) + [99, 999], 
@@ -68,7 +68,7 @@ trials = {
 
 directories = ["output_dir", "save_database_path", "save_nonconform_scores_path"]
 trials = expand_grid(trials)
-trials = trials.reset_index()
+trials = trials.reset_index(drop=True)
 
 # Filter down trials
 
@@ -88,6 +88,8 @@ for i, trial in tqdm(trials.iterrows()):
     curr_config['poolers_to_use'] = get_actual_poolers_to_save(trial["poolers_to_use_desc"], curr_config['layers_to_save'])
     for dir in directories:
         curr_config[dir] = os.path.join(base_config[dir], id)
+        if dir == "save_nonconform_scores_path":
+            curr_config[dir] += '.csv'
     # set reading from database and scores 
     curr_config['read_from_database_path'] = True if trial['prediction_method'] == "conformal" else False
     curr_config['read_from_scores_path'] = False

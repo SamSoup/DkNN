@@ -5,12 +5,9 @@ See python3 main.py -help for all possible arugments
 """
 
 from dataclasses import dataclass, field
-from socket import AF_NETROM
 from typing import Optional, List
 import numpy as np
 import os
-
-from NearestNeighborDistancesToWeightsFuncts import NearestNeighborDistancesToWeightsFuncts
 
 @dataclass
 class DKNNArguments:

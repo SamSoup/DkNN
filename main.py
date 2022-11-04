@@ -414,9 +414,9 @@ def main():
         dist_to_weight_fct = dist_to_weight_fct.get(DKNN_args.dist_to_weight_fct)
 
         # create the NearestNeighborLogit Function
-        if DKNN_args.prediction_method == "nonconformal":
+        if DKNN_args.prediction_method == "conformal":
             logitsFactory = LogProbabilityLogitsFactory(label_list)
-        elif DKNN_args.prediction_method == "conformal":
+        elif DKNN_args.prediction_method == "nonconformal":
             # compute the conformal socres first
             computeAndSaveConformalScoresTrainer = ComputeAndSaveConformalScoresTrainer(
                 model=model,
