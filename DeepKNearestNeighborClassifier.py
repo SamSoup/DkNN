@@ -24,4 +24,4 @@ class DeepKNearestNeighborClassifier:
         logits = self.logits.compute_logits(neighbor_labels, weights)
         logits = torch.from_numpy(logits).to(device)
         loss = self.loss(logits, labels) if labels is not None else None
-        return loss, logits, neighbor_ids
+        return loss, logits, neighbor_ids, distances

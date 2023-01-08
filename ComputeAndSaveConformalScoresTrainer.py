@@ -86,7 +86,7 @@ class ComputeAndSaveConformalScoresTrainer:
             for i, batch in enumerate(eval_dataloader):
                 inputs = prepare_inputs(batch, self._signature_columns, self.args.device)
                 labels = inputs.pop("labels").cpu().numpy()
-                attention_mask = inputs["attention_mask"]
+                attention_mask = inputs["attention_mask"].detach().cpu()
                 outputs = self.model(**inputs, output_hidden_states=True)
                 hidden_states = get_hidden_states(self.model.config.is_encoder_decoder, outputs)
                 layer_reps = {}

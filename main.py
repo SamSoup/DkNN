@@ -261,7 +261,7 @@ def main():
     # add a unique tag for the training examples - might be useful for retrieval later, if we should do DkNN
     if DKNN_args.do_DKNN:
         train_data = train_data.add_column("tag", list(range(train_data.num_rows)))
-    if data_args.save_logits or DKNN_args.output_and_save_neighbor_ids:
+    if data_args.save_logits or DKNN_args.output_and_save_neighbors:
         eval_data = eval_data.add_column("tag", list(range(eval_data.num_rows)))
         test_data = test_data.add_column("tag", list(range(test_data.num_rows)))
 
@@ -389,7 +389,7 @@ def main():
             nearestNeighborFactory = KDTreeNearestNeighborFactory(
                 K=DKNN_args.K, 
                 layers_to_save=DKNN_args.layers_to_save, 
-                database=database, 
+                database=database,
                 layer_dim=model.config.hidden_size,
                 dist_metric=dist_funct,
                 leaf_size=DKNN_args.leaf_size
@@ -459,7 +459,7 @@ def main():
             poolers = poolers,
             classifier=classifier,
             save_logits=data_args.save_logits,
-            output_and_save_neighbor_ids=DKNN_args.output_and_save_neighbor_ids
+            output_and_save_neighbors=DKNN_args.output_and_save_neighbors
         )
 
     # Evaluation

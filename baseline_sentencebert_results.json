@@ -1,0 +1,11 @@
+{
+    "predict_f1": 0.5817490494296579,
+    "predict_accuracy": 0.7659574468085106,
+    "predict_precision": 0.6322314049586777,
+    "predict_recall": 0.5387323943661971,
+    "Dataset": "toxigen",
+    "Model": "baseline_sentencebert",
+    "do_DKNN": false,
+    "neighbor_method": null,
+    "prediction_method": null
+}

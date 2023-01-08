@@ -51,9 +51,15 @@ conda install -c conda-forge future
 python -m pip install sentencepiece
 python -m pip install lshashing==1.0.5
 python -m pip install lshashpy3
-python -m pip install --user numpy scipy matplotlib ipython jupyter pandas sympy nose
+python -m pip install numpy scipy matplotlib ipython jupyter pandas sympy nose
 python -m pip install pycalib
 python -m pip install seaborn
+python -m pip install evaluate
+python -m pip install bert_score
+python -m pip install git+https://github.com/google-research/bleurt.git
+python -m pip install sentence-transformers
+python -m pip install multipledispatch
+python -m pip install nltk gensim
 conda update --all
 ```
 

@@ -1,0 +1,11 @@
+{
+    "predict_f1": 0.08791208791208792,
+    "predict_accuracy": 0.6468085106382979,
+    "predict_precision": 0.2,
+    "predict_recall": 0.056338028169014086,
+    "do_DKNN": false,
+    "neighbor_method": null,
+    "prediction_method": null,
+    "Dataset": "toxigen",
+    "Model": "baseline_bart"
+}

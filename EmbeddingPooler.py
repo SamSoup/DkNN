@@ -10,6 +10,8 @@ class EmbeddingPooler:
     All function take as input an array of dimensions (batch_size, max_seq_len, hidden_dim), 
     where max_seq_len is dependent upon the examples in the batch (dynamic), and
     hidden_dim is the number of hidden units that's model dependent
+    
+    Max pooling?
     """
     def __init__(self):
         self.name_to_fct = {

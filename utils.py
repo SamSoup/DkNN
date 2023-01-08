@@ -14,6 +14,12 @@ import numpy as np
 import inspect
 import re
 import os
+import json
+
+def parse_json(path):
+    with open(path, 'r') as fr:
+        results = json.load(fr)
+    return results
 
 def random_dropOut(x: Iterable[any], probability: float) -> Iterable[any]:
     return [ item for item in x if random.random() <= probability ]
@@ -46,6 +52,13 @@ def remove_file_if_already_exists(path_to_file: str):
     if os.path.exists(path_to_file):
         os.remove(path_to_file)
 
+def hidden_states_to_cpu(hidden_states: Tuple[torch.tensor]) -> List[torch.tensor]:
+    ret = []
+    for state in hidden_states:
+        ret.append(state.detach().cpu())
+        del state
+    return ret
+
 def get_hidden_states(is_encoder_decoder: bool, outputs: ModelOutput) -> Tuple[torch.tensor]:
     """
     Check if model is encoder-decoder, so that we get hidden states of both the encoder and decoder, 
@@ -59,15 +72,8 @@ def get_hidden_states(is_encoder_decoder: bool, outputs: ModelOutput) -> Tuple[t
         Tuple[torch.tensor]: (batch_size, seq_length, hidden_dim) of len = embedding layer + model hidden layers
     """
     if is_encoder_decoder:
-        return outputs["encoder_hidden_states"] + outputs["decoder_hidden_states"]
-    return outputs["hidden_states"]
-
-def hidden_states_to_cpu(hidden_states: Tuple[torch.tensor]) -> List[torch.tensor]:
-    ret = []
-    for state in hidden_states:
-        ret.append(state.detach().cpu())
-        del state
-    return ret
+        return hidden_states_to_cpu(outputs["encoder_hidden_states"] + outputs["decoder_hidden_states"])
+    return hidden_states_to_cpu(outputs["hidden_states"])
 
 def get_layer_representations(hidden_states: torch.tensor) -> torch.tensor:
     """

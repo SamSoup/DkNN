@@ -50,11 +50,14 @@ def get_actual_layers_to_save(layer_config: str, num_layers: int):
     }
     return switcher[layer_config]
 
-def get_actual_poolers_to_save(pooler_config: str, layers_to_save: List[int]):
+def get_actual_poolers_to_save(layer_config: str, pooler_config: str, layers_to_save: List[int]):
     switcher = {
         "mean_with_attention": ["mean_with_attention"] * len(layers_to_save), # for all layers regardless
         # # use mean with attention for the embedding layer (first), and the rest cls
-        "mean_with_attention_and_cls": ["mean_with_attention"] + ["cls"] * (len(layers_to_save) - 1)
+        "mean_with_attention_and_cls": (
+            ["cls"] if layer_config == "Last Only"
+            else ["mean_with_attention"] + ["cls"] * (len(layers_to_save) - 1)
+        )
     }
     return switcher[pooler_config]
 
@@ -69,6 +72,9 @@ trials = {
 directories = ["output_dir", "save_database_path", "save_nonconform_scores_path"]
 trials = expand_grid(trials)
 trials = trials.reset_index(drop=True)
+
+# offset from conformal to nonconformal
+offset = trials.shape[0] / 2
 
 # Filter down trials
 
@@ -85,13 +91,19 @@ for i, trial in tqdm(trials.iterrows()):
         curr_config[key] = trial[key]
     # based on the descriptions for layers and poolers, act accordingly
     curr_config['layers_to_save'] = get_actual_layers_to_save(trial["layers_to_save_desc"], num_layers)
-    curr_config['poolers_to_use'] = get_actual_poolers_to_save(trial["poolers_to_use_desc"], curr_config['layers_to_save'])
+    curr_config['poolers_to_use'] = get_actual_poolers_to_save(trial["layers_to_save_desc"], 
+                                                               trial["poolers_to_use_desc"], curr_config['layers_to_save'])
+    # save - directories
     for dir in directories:
         curr_config[dir] = os.path.join(base_config[dir], id)
         if dir == "save_nonconform_scores_path":
             curr_config[dir] += '.csv'
     # set reading from database and scores 
-    curr_config['read_from_database_path'] = True if trial['prediction_method'] == "conformal" else False
+    if trial['prediction_method'] == "conformal":
+        curr_config['read_from_database_path'] = True
+        curr_config['save_database_path'] = os.path.join(base_config[dir], f"trial-{int(i-offset)}")
+    else:
+        curr_config['read_from_database_path'] = False
     curr_config['read_from_scores_path'] = False
     with open(os.path.join(output_dir, f"{id}.json"), 'w') as f:
         json.dump(curr_config, f)

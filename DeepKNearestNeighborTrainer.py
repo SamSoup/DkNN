@@ -55,7 +55,7 @@ class DeepKNearestNeighborTrainer(SaveLogitsTrainer):
         layers_to_save: List[int] = None,
         poolers: List[Callable[[torch.tensor], torch.tensor]] = None,
         classifier: DeepKNearestNeighborClassifier = None,
-        output_and_save_neighbor_ids: bool = False,        
+        output_and_save_neighbors: bool = False,        
     ):
         """
         Arguments follows directly from Transformers.Trainer except the following:
@@ -67,15 +67,15 @@ class DeepKNearestNeighborTrainer(SaveLogitsTrainer):
         self.layers_to_save = layers_to_save
         self.poolers = poolers
         self.classifier = classifier
-        self.output_and_save_neighbor_ids = output_and_save_neighbor_ids
+        self.output_and_save_neighbors = output_and_save_neighbors
         self._signature_columns = find_signature_columns(model, args)
         self._signature_columns += ["tag"]
 
     def DKNN_predict(self, inputs: Dict[str, Union[torch.Tensor, Any]], 
                      labels: torch.Tensor, model: nn.Module) -> Dict[str, torch.Tensor]:
-        if self.save_logits or self.output_and_save_neighbor_ids:
-            tags = inputs.pop("tag").cpu().detach().numpy()
-        attention_mask = inputs["attention_mask"]
+        if self.save_logits or self.output_and_save_neighbors:
+            tags = inputs.pop("tag").cpu().detach().numpy().astype(int)
+        attention_mask = inputs["attention_mask"].detach().cpu()
         outputs = model(**inputs, output_hidden_states=True)
         is_encoder_decoder = (model.module.config.is_encoder_decoder if type(model) == nn.parallel.DataParallel 
                             else model.config.is_encoder_decoder)
@@ -88,14 +88,15 @@ class DeepKNearestNeighborTrainer(SaveLogitsTrainer):
         torch.cuda.empty_cache()
         if labels is not None and labels.dtype is torch.bool:
             labels = labels.type(torch.LongTensor).to(self.args.device)
-        loss, logits, neighbor_ids = self.classifier.compute_loss_and_logits(
-            layer_reps, labels, self.args.device, self.output_and_save_neighbor_ids
+        loss, logits, neighbor_ids, distances = self.classifier.compute_loss_and_logits(
+            layer_reps, labels, self.args.device, self.output_and_save_neighbors
         )
         # save the metadatas, if we should - logits, neighbors
         if self.save_logits:
             save_matrix_with_tags_to_file(self.save_logits_path, tags, logits.cpu().detach().numpy())
-        if self.output_and_save_neighbor_ids:
-            save_matrix_with_tags_to_file(self.save_neighbor_ids_path, tags, neighbor_ids.astype(np.int64))
+        if self.output_and_save_neighbors:
+            save_matrix_with_tags_to_file(self.save_neighbor_ids_path, tags, neighbor_ids.astype(int))
+            save_matrix_with_tags_to_file(self.save_neighbor_dists_path, tags, distances)
         outputs = { "loss": loss, "logits": logits }
         return outputs
 
@@ -219,9 +220,11 @@ class DeepKNearestNeighborTrainer(SaveLogitsTrainer):
         )
 
     def _create_save_files(self, prefix: str):
-        if self.output_and_save_neighbor_ids:
+        if self.output_and_save_neighbors:
             self.save_neighbor_ids_path = os.path.join(self.args.output_dir, f"{prefix}_neighbors.txt")
+            self.save_neighbor_dists_path = os.path.join(self.args.output_dir, f"{prefix}_neighbor_dists.txt")
             remove_file_if_already_exists(self.save_neighbor_ids_path)
+            remove_file_if_already_exists(self.save_neighbor_dists_path)
         if self.save_logits:
             self.save_logits_path = os.path.join(self.args.output_dir, f"{prefix}_logits.txt")
             remove_file_if_already_exists(self.save_logits_path)

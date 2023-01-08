@@ -3,12 +3,16 @@
         "Dataset": "toxigen",
         "Model": "Bart-large",
         "output_dir": "./output/toxigen/bart-large-1",
-        "data_dir": "./data/toxigen"
+        "data_dir": "./data/toxigen",
+        "input_colname": "text",
+        "model_path": "./output/toxigen/bart-large-1/checkpoint-300"
     },
     {
         "Dataset": "toxigen",
         "Model": "DeBerta-large",
         "output_dir": "./output/toxigen/deberta-v3-large-1",
-        "data_dir": "./data/toxigen"
+        "data_dir": "./data/toxigen",
+        "input_colname": "text",
+        "model_path": "./output/toxigen/deberta-v3-large-1/checkpoint-200"
     }
 ]

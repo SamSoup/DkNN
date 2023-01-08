@@ -1,0 +1,11 @@
+{
+    "predict_f1": 0.42411642411642414,
+    "predict_accuracy": 0.7050053248136315,
+    "predict_precision": 0.5177664974619289,
+    "predict_recall": 0.3591549295774648,
+    "do_DKNN": false,
+    "neighbor_method": null,
+    "prediction_method": null,
+    "Dataset": "toxigen",
+    "Model": "baseline_word2vec"
+}

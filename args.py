@@ -90,9 +90,10 @@ class DKNNArguments:
             "help": "If neighbor_method is KSH, then this is the number of random hash functions to use"
         }
     )
-    output_and_save_neighbor_ids: Optional[bool] = field (
+    output_and_save_neighbors: Optional[bool] = field (
         default = False, metadata = {
-            "help": "Should we output and save the nearest neighbors of each inference example?"
+            "help": "Should we output and save the nearest neighbors of each inference example? If so, will "
+            "save neighbor ids and distances to the retrieved nearest neighbors"
         }
     )
     dist_metric: Optional[str] = field (

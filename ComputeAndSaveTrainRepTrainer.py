@@ -4,12 +4,19 @@ from transformers import (
     PreTrainedTokenizerBase,
     TrainingArguments
 )
+from utils import (
+    find_signature_columns, 
+    prepare_inputs, 
+    remove_unused_columns, 
+    get_hidden_states, 
+    get_pooled_layer_representations, 
+    hidden_states_to_cpu
+)
 from transformers.data.data_collator import default_data_collator, DataCollatorWithPadding
 from datasets import Dataset
 from typing import Optional, Union, List, Dict, Callable
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
-from utils import get_layer_representations, find_signature_columns, prepare_inputs, remove_unused_columns, get_hidden_states, get_pooled_layer_representations
 import torch
 import torch.nn as nn
 import numpy as np
@@ -88,7 +95,7 @@ class ComputeAndSaveTrainRepTrainer:
             inputs = prepare_inputs(batch, self._signature_columns, self.args.device)
             tags = inputs.pop("tag").cpu().numpy()
             labels = inputs.pop("labels").cpu().numpy()
-            attention_mask = inputs["attention_mask"]
+            attention_mask = inputs["attention_mask"].cpu()
             with torch.no_grad():
                 outputs = self.model(**inputs, output_hidden_states=True)
             hidden_states = get_hidden_states(self.model.config.is_encoder_decoder, outputs)
@@ -112,4 +119,3 @@ class ComputeAndSaveTrainRepTrainer:
                 np.savetxt(save_file_name, database[layer], delimiter=",")
                 progress_bar.update(1)
         return database
-
