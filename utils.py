@@ -8,21 +8,82 @@ from transformers.utils import find_labels, ModelOutput
 from packaging import version
 import datasets
 import torch
+import math
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import pandas as pd
 import inspect
 import re
 import os
 import json
 
-def parse_json(path):
+def get_neighbor_text_and_label(
+    train_inputs: pd.DataFrame, test_inputs: pd.DataFrame, 
+    neighbor_indices: np.ndarray
+):
+    neighbors = pd.DataFrame(
+        columns=[f"Neighbor{i+1}{postfix}" 
+                 for i in range(neighbor_indices.shape[1]) 
+                 for postfix in ("","_label") 
+        ]
+    )
+    for ind in neighbor_indices:
+        subset = train_inputs.iloc[ind]
+        neighbors.loc[len(neighbors)] = subset[['text', 'label']].to_numpy().flatten()
+    neighbors['input'] = test_inputs['text']
+    neighbors['input_label'] = test_inputs['label']
+    return neighbors
+
+def mkdir_if_not_exists(dirpath: str):
+    if not os.path.exists(dirpath):
+        os.mkdir(dirpath)
+
+def parse_json(path: str):
     with open(path, 'r') as fr:
         results = json.load(fr)
     return results
 
 def random_dropOut(x: Iterable[any], probability: float) -> Iterable[any]:
     return [ item for item in x if random.random() <= probability ]
+
+def get_actual_layers_to_save(layer_config: str, num_layers: int):
+    switcher = {
+        "All": list(range(num_layers)),
+        "Embedding Only": [0],
+        "Embedding + Last": [0, num_layers-1],
+        "Last Only": [num_layers-1], 
+        "Random 25%": random.sample(list(range(num_layers)), math.ceil(0.25*num_layers)), 
+        "Random 50%": random.sample(list(range(num_layers)), math.ceil(0.5*num_layers)), 
+        "Random 75%": random.sample(list(range(num_layers)), math.ceil(0.75*num_layers)),
+    }
+    return switcher[layer_config]
+
+def get_actual_poolers_to_save(layer_config: str, pooler_config: str, layers_to_save: List[int]):
+    switcher = {
+        "mean_with_attention": ["mean_with_attention"] * len(layers_to_save), # for all layers regardless
+        # # use mean with attention for the embedding layer (first), and the rest cls
+        "mean_with_attention_and_cls": (
+            ["cls"] if layer_config == "Last Only"
+            else ["mean_with_attention"] + ["cls"] * (len(layers_to_save) - 1)
+        )
+    }
+    return switcher[pooler_config]
+
+def get_train_representations_from_file(filename: str):
+    train_representations = np.loadtxt(filename, delimiter=",")
+    train_representations = train_representations[
+        train_representations[:, -2].argsort() # sort by idx to get original training example 
+    ]
+    train_representations = train_representations[:, :-2] # last two are tag and label
+    return train_representations
+
+def flip_bits(arr: np.ndarray) -> np.ndarray:
+    """
+    Given an numpy array of all either 0 or 1s, flip 0 to 1 and 1 to 0.
+    """
+
+    return (~arr.astype(bool)).astype(int)
 
 def randargmax(logits: np.ndarray) -> np.ndarray:
     """

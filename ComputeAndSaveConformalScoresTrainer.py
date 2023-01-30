@@ -43,6 +43,8 @@ class ComputeAndSaveConformalScoresTrainer:
         poolers: List[Callable[[torch.tensor], torch.tensor]] = None,
         nearestNeighborFunction: AbstractNearestNeighbor = None,
         dist_to_weight_fct: Callable[[np.ndarray], np.ndarray] = None,
+        # read_from_eval_layer_rep_path: bool = False,
+        # save_eval_layer_rep_path: Optional[str] = None,
         read_from_scores_path: bool = False,
         save_nonconform_scores_path: Optional[str] = None
     ):

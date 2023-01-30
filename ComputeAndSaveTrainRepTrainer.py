@@ -72,14 +72,15 @@ class ComputeAndSaveTrainRepTrainer:
         """
         if self.read_from_database_path:
             print("***** Running DkNN - Loading database of layer representation from specified path *****")
-            start = time.time()
-            database = { 
-                layer: np.loadtxt(os.path.join(self.save_database_path, f"layer_{layer}.csv"), 
-                                    delimiter=",") 
-                for layer in self.layers_to_save 
-            }
-            end = time.time()
-            print(f"Initializing tables took {end - start}")
+            database = {}
+            for layer in tqdm(self.layers_to_save):
+                database[layer] = np.loadtxt(
+                    os.path.join(self.save_database_path,
+                                 f"layer_{layer}.csv"), delimiter=",")
+                # add in tag and index
+                database[layer] = np.hstack((database[layer], 
+                                             np.array(self.train_dataset['tag']).reshape(-1, 1), 
+                                             np.array(self.train_dataset['label']).reshape(-1, 1)))
             return database
 
         print("***** Running DkNN - Computing Layer Representations for Training Examples *****")

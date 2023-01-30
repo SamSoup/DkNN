@@ -1,6 +1,10 @@
 # Custom
+results/
+sbatch/
+scratch/
+tree.jpeg
 R/
-test.txt
+test*
 ProtoTEx/
 *.e*
 *.o*

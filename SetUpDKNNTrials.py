@@ -16,6 +16,7 @@ from tqdm.auto import tqdm
 from itertools import product
 from pathlib import Path
 from typing import Dict, List
+from utils import get_actual_layers_to_save, get_actual_poolers_to_save
 import sys
 import os
 import random
@@ -37,29 +38,6 @@ def expand_grid(trials: Dict[str, List[str]]):
 possible_layer_configs = ["All", "Embedding Only", "Embedding + Last", "Last Only"]
 # possible_layer_configs = ["All", "Embedding Only", "Embedding + Last", "Last Only", "Random 25%", "Random 50%", "Random 75%"]
 possible_pooler_configs = ["mean_with_attention", "mean_with_attention_and_cls"]
-
-def get_actual_layers_to_save(layer_config: str, num_layers: int):
-    switcher = {
-        "All": list(range(num_layers)),
-        "Embedding Only": [0],
-        "Embedding + Last": [0, num_layers-1],
-        "Last Only": [num_layers-1], 
-        "Random 25%": random.sample(list(range(num_layers)), math.ceil(0.25*num_layers)), 
-        "Random 50%": random.sample(list(range(num_layers)), math.ceil(0.5*num_layers)), 
-        "Random 75%": random.sample(list(range(num_layers)), math.ceil(0.75*num_layers)),
-    }
-    return switcher[layer_config]
-
-def get_actual_poolers_to_save(layer_config: str, pooler_config: str, layers_to_save: List[int]):
-    switcher = {
-        "mean_with_attention": ["mean_with_attention"] * len(layers_to_save), # for all layers regardless
-        # # use mean with attention for the embedding layer (first), and the rest cls
-        "mean_with_attention_and_cls": (
-            ["cls"] if layer_config == "Last Only"
-            else ["mean_with_attention"] + ["cls"] * (len(layers_to_save) - 1)
-        )
-    }
-    return switcher[pooler_config]
 
 trials = {
     'prediction_method': ["nonconformal", "conformal"], # always run conformal before normal
@@ -99,14 +77,13 @@ for i, trial in tqdm(trials.iterrows()):
         if dir == "save_nonconform_scores_path":
             curr_config[dir] += '.csv'
     # set reading from database and scores 
-    if trial['prediction_method'] == "conformal":
-        curr_config['read_from_database_path'] = True
-        curr_config['save_database_path'] = os.path.join(base_config[dir], f"trial-{int(i-offset)}")
-    else:
-        curr_config['read_from_database_path'] = False
+    curr_config['read_from_database_path'] = False if i == 0 or i == offset else True
+    # all trials would use the same precomputed layers 
+    # representations differing by pooler used
+    curr_config['save_database_path'] = os.path.join(base_config[dir], 'train', trial["poolers_to_use_desc"])
     curr_config['read_from_scores_path'] = False
     with open(os.path.join(output_dir, f"{id}.json"), 'w') as f:
-        json.dump(curr_config, f)
+        json.dump(curr_config, f, indent=4, sort_keys=True)
 
 # Save trial metadata
 trials.to_csv(os.path.join(output_dir, "trial_metadata.csv"), header=True, index=False)

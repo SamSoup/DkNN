@@ -222,7 +222,7 @@ class DeepKNearestNeighborTrainer(SaveLogitsTrainer):
     def _create_save_files(self, prefix: str):
         if self.output_and_save_neighbors:
             self.save_neighbor_ids_path = os.path.join(self.args.output_dir, f"{prefix}_neighbors.txt")
-            self.save_neighbor_dists_path = os.path.join(self.args.output_dir, f"{prefix}_neighbor_dists.txt")
+            self.save_neighbor_dists_path = os.path.join(self.args.output_dir, f"{prefix}_neighbors_dists.txt")
             remove_file_if_already_exists(self.save_neighbor_ids_path)
             remove_file_if_already_exists(self.save_neighbor_dists_path)
         if self.save_logits:

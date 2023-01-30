@@ -43,6 +43,7 @@ Bart-base
 conda create --name DkNN python=3.9
 conda activate DkNN
 conda install libgcc
+conda update libstdcxx-ng
 conda install -n DkNN ipykernel --update-deps --force-reinstall
 conda install -c huggingface transformers huggingface_hub
 conda install -c conda-forge ray-tune datasets scikit-learn
@@ -59,7 +60,7 @@ python -m pip install bert_score
 python -m pip install git+https://github.com/google-research/bleurt.git
 python -m pip install sentence-transformers
 python -m pip install multipledispatch
-python -m pip install nltk gensim
+python -m pip install nltk gensim sacrebleu
 conda update --all
 ```
 

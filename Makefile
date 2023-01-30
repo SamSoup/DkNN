@@ -29,7 +29,7 @@ compile_results:
 	python3 compile_results.py ./result_locations.json compiled_results.csv
 
 compile_results_toxigen:
-	python3 compile_results_new.py ./result_locations_toxigen.json compiled_results_toxigen.csv
+	python3 ./results/toxigen/compile_results_new.py ./results/toxigen/result_locations_toxigen.json compiled_results_toxigen.csv
 
 evaluate_explanations_toxigen:
 	python3 EvaluateExplanations.py ./result_locations_toxigen.json

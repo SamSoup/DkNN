@@ -6,6 +6,7 @@ of command line arguments occurs
 from transformers import (
     AutoConfig,
     AutoModelForSequenceClassification,
+    AutoModelForSeq2SeqLM,
     AutoTokenizer,
     DataCollatorWithPadding,
     EvalPrediction,
@@ -14,6 +15,7 @@ from transformers import (
     PretrainedConfig,
     TrainingArguments,
     Trainer,
+    Seq2SeqTrainer,
     default_data_collator,
     set_seed
 )
@@ -150,6 +152,12 @@ def main():
         eval_data = read_data(data_args.validation_file)
         test_data = read_data(data_args.test_file)
 
+    if 't5' in model_args.model_name_or_path:
+        intToText = ['nonhate', 'hate']
+        train_data['label'] = list(map(lambda x: intToText[x], train_data['label']))
+        eval_data['label'] = list(map(lambda x: intToText[x], eval_data['label']))
+        test_data['label'] = list(map(lambda x: intToText[x], test_data['label']))
+
     # convert data to what models expect
     train_data = Dataset.from_pandas(train_data)
     eval_data = Dataset.from_pandas(eval_data)
@@ -173,9 +181,13 @@ def main():
     # max_position_embeddings=512 by default, which may be less than the maximum sequence length
     # if that's case, then we randomly initialize the classification head by passing
     # ignore_mismatched_sizes = True
-    if config.max_position_embeddings < data_args.max_seq_length:
+    if 'xlnet' not in model_args.model_name_or_path and hasattr(config, 'max_position_embeddings') and config.max_position_embeddings < data_args.max_seq_length:
         config.max_position_embeddings = data_args.max_seq_length
         ignore_mismatched_sizes = True
+    if 'xlnet' not in model_args.model_name_or_path and hasattr(config, 'n_positions') and config.n_positions < data_args.max_seq_length:
+        config.n_positions = data_args.max_seq_length
+        ignore_mismatched_sizes = True
+
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,
@@ -183,16 +195,40 @@ def main():
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
-    model = AutoModelForSequenceClassification.from_pretrained(
-        model_args.model_name_or_path,
-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
-        config=config,
-        cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-        ignore_mismatched_sizes=ignore_mismatched_sizes
-    )
-
+    if 'gpt2' in model_args.model_name_or_path:
+        # GPT-2 is a text generative model which its last token embedding to 
+        # predict subsequent tokens. Therefore unlike BERT which uses its first 
+        # token embedding, in the tokenization step of input text here, 
+        # we should use the last token as below.
+        tokenizer.padding_side = "left"
+        # Define PAD Token = EOS Token = 50256
+        tokenizer.pad_token = tokenizer.eos_token
+        config.pad_token_id = config.eos_token_id
+        # tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+    if 'xlnet' in model_args.model_name_or_path or gpt2 in model_args.model_name_or_path:
+        training_args.dataloader_drop_last = True
+    if 't5' in model_args.model_name_or_path:
+        # need to run tokenzier on dataset
+        model = AutoModelForSeq2SeqLM.from_pretrained(
+            model_args.model_name_or_path,
+            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+            config=config,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+            ignore_mismatched_sizes=ignore_mismatched_sizes
+        )
+    else:
+        model = AutoModelForSequenceClassification.from_pretrained(
+            model_args.model_name_or_path,
+            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+            config=config,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+            ignore_mismatched_sizes=ignore_mismatched_sizes
+        )
+    model.resize_token_embeddings(len(tokenizer))
     if model_args.freeze_base_model_params:
         for name, param in model.named_parameters():
             if 'classification_head' not in name and 'classifier' not in name: # freeze all besides classifier layer
@@ -234,9 +270,15 @@ def main():
         args = ((examples[data_args.input_key],))
         result = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
 
-        # Map labels to IDs
-        if label_to_id is not None and "label" in examples:
-            result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
+        # Map labels to IDs, if not t5
+        if "label" in examples:
+            if 't5' in model_args.model_name_or_path :
+                result["label"] = tokenizer(examples["label"], 
+                                            padding=True, 
+                                            max_length=max_seq_length, 
+                                            truncation=True).input_ids
+            elif label_to_id is not None:
+                result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
         return result
     with training_args.main_process_first(desc="dataset map pre-processing"):
         data_dict = {
@@ -276,7 +318,8 @@ def main():
     def compute_metrics(p: EvalPrediction) -> Dict[str, float]:
         computed_scores = {}
         preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
-        preds = randargmax(preds) # break ties arbitrarily
+        if preds.ndim > 1:
+            preds = randargmax(preds) # break ties arbitrarily
         # preds = np.argmax(preds, axis=1)
         # see datasets.list_metrics() for the complete list
         for metric_desc in metric_descs:
@@ -288,6 +331,37 @@ def main():
             computed_scores["f1-negative"] = f1_scores[0]
             computed_scores["f1-positive"] = f1_scores[1]
         return computed_scores
+
+    metric = load_metric("sacrebleu")
+    def postprocess_text(preds, labels):
+        preds = [pred.strip() for pred in preds]
+        labels = [[label.strip()] for label in labels]
+
+        return preds, labels
+    generative_label_to_id = { label: i for i, label in enumerate(label_list) }
+    def compute_metrics_generative(eval_preds):
+        preds, labels = eval_preds
+        if isinstance(preds, tuple):
+            preds = preds[0]
+        decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
+        decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+
+        # Some simple post-processing
+        decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
+        # convert text to ids
+        decoded_preds_ids = np.array(list(map(lambda x: generative_label_to_id[x] if x in generative_label_to_id else -1, 
+                                              decoded_preds)))
+        decoded_labels_ids = np.array(list(map(lambda x: generative_label_to_id[x[0]] if x[0] in generative_label_to_id else -1, 
+                                               decoded_labels)))
+        p = EvalPrediction(predictions=decoded_preds_ids, label_ids=decoded_labels_ids)
+        result = compute_metrics(p)
+        #result = metric.compute(predictions=decoded_preds, references=decoded_labels)
+        #result = {"bleu": result["score"]}
+
+        prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds]
+        result["gen_len"] = np.mean(prediction_lens)
+        result = {k: round(v, 4) for k, v in result.items()}
+        return result
 
     # Data collator will default to DataCollatorWithPadding when the tokenizer is passed to Trainer, so we change it if
     # we already did the padding.
@@ -318,6 +392,20 @@ def main():
         save_logits=data_args.save_logits,
         loss_fct=nn.CrossEntropyLoss(weight=train_class_weights)
     )
+    elif 't5' in model_args.model_name_or_path:
+        training_args.generation_max_length = config.max_length
+        training_args.generation_num_beams = config.num_beams
+        training_args.predict_with_generate = True
+        trainer = Seq2SeqTrainer(
+            model=model,
+            args=training_args,
+            train_dataset=train_data if training_args.do_train else None,
+            eval_dataset=eval_data if training_args.do_eval else None,
+            tokenizer=tokenizer,
+            data_collator=data_collator,
+            callbacks=callbacks,
+            compute_metrics=compute_metrics_generative,
+        )
     else:
         trainer = SaveLogitsTrainer(
             model=model,
@@ -476,41 +564,65 @@ def main():
     # Test set Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
-        # Removing the `label` columns because it contains -1 and Trainer won't like that.
-        if data_args.compute_predict_results:
-            test_labels = test_data["label"]
-        test_data = test_data.remove_columns("label")
-        prediction_output = trainer.predict(test_data, metric_key_prefix="predict")
-        predictions = prediction_output.predictions
-        if isinstance(predictions, tuple) and len(predictions) != test_data.num_rows:
-            # assume the first thing in the tuple is predictions, if it's multiple tensors
-            predictions = predictions[0]
+        if 't5' in model_args.model_name_or_path or 'xlnet' in model_args.model_name_or_path:
+            metrics = trainer.evaluate(eval_dataset=test_data, 
+                                       metric_key_prefix="predict")
+            max_eval_samples = (
+                data_args.max_eval_samples if data_args.max_eval_samples is not None else len(eval_data)
+            )
+            metrics["predict_samples"] = min(max_eval_samples, len(test_data))
+            trainer.log_metrics("predict", metrics)
+            trainer.save_metrics("predict", metrics)
+            # predict_results = trainer.predict(
+            #     test_data, metric_key_prefix="predict", 
+            #     max_length=training_args.generation_max_length,
+            #     num_beams=training_args.generation_num_beams
+            # )
+            # if trainer.is_world_process_zero():
+            #     if training_args.predict_with_generate:
+            #         predictions = tokenizer.batch_decode(
+            #             predict_results.predictions, skip_special_tokens=True, clean_up_tokenization_spaces=True
+            #         )
+            #         predictions = [pred.strip() for pred in predictions]
+            #         output_prediction_file = os.path.join(training_args.output_dir, "generated_predictions.txt")
+            #         with open(output_prediction_file, "w", encoding="utf-8") as writer:
+            #             writer.write("\n".join(predictions))
+        else:
+            # Removing the `label` columns because it contains -1 and Trainer won't like that.
+            if data_args.compute_predict_results:
+                test_labels = test_data["label"]
+            test_data = test_data.remove_columns("label")
+            prediction_output = trainer.predict(test_data, metric_key_prefix="predict")
+            predictions = prediction_output.predictions
+            if isinstance(predictions, tuple) and len(predictions) != test_data.num_rows:
+                # assume the first thing in the tuple is predictions, if it's multiple tensors
+                predictions = predictions[0]
 
-        # compute results for test set (NOTE: this assumes that the test set also has labels)
-        if data_args.compute_predict_results:
-            p = EvalPrediction(predictions=predictions, label_ids=test_labels)
-            predict_metrics = compute_metrics(p)
-            # To be JSON-serializable, we need to remove numpy types or zero-d tensors
-            predict_metrics = denumpify_detensorize(predict_metrics)
-            predict_metrics.update(prediction_output.metrics)
-            predict_metrics['predict_samples'] = len(test_data)
-            # Prefix all keys with metric_key_prefix + '_'
-            for key in list(predict_metrics.keys()):
-                if not key.startswith("predict_"):
-                    predict_metrics[f"predict_{key}"] = predict_metrics.pop(key)
-            trainer.log_metrics("predict", predict_metrics)
-            trainer.save_metrics("predict", predict_metrics)
+            # compute results for test set (NOTE: this assumes that the test set also has labels)
+            if data_args.compute_predict_results:
+                p = EvalPrediction(predictions=predictions, label_ids=test_labels)
+                predict_metrics = compute_metrics(p)
+                # To be JSON-serializable, we need to remove numpy types or zero-d tensors
+                predict_metrics = denumpify_detensorize(predict_metrics)
+                predict_metrics.update(prediction_output.metrics)
+                predict_metrics['predict_samples'] = len(test_data)
+                # Prefix all keys with metric_key_prefix + '_'
+                for key in list(predict_metrics.keys()):
+                    if not key.startswith("predict_"):
+                        predict_metrics[f"predict_{key}"] = predict_metrics.pop(key)
+                trainer.log_metrics("predict", predict_metrics)
+                trainer.save_metrics("predict", predict_metrics)
 
-        # predictions = np.argmax(predictions, axis=1) 
-        predictions = randargmax(predictions) # break ties arbitrarily
-        output_predict_file = os.path.join(training_args.output_dir, f"predict_results.txt")
-        if trainer.is_world_process_zero():
-            with open(output_predict_file, "w") as writer:
-                logger.info(f"***** Predict results *****")
-                writer.write("index\tprediction\n")
-                for index, item in enumerate(predictions):
-                    item = label_list[item]
-                    writer.write(f"{index}\t{item}\n")
+            # predictions = np.argmax(predictions, axis=1) 
+            predictions = randargmax(predictions) # break ties arbitrarily
+            output_predict_file = os.path.join(training_args.output_dir, f"predict_results.txt")
+            if trainer.is_world_process_zero():
+                with open(output_predict_file, "w") as writer:
+                    logger.info(f"***** Predict results *****")
+                    writer.write("index\tprediction\n")
+                    for index, item in enumerate(predictions):
+                        item = label_list[item]
+                        writer.write(f"{index}\t{item}\n")
 
     # finally, save the data arguments and DKNN arguments 
     torch.save(data_args, os.path.join(training_args.output_dir, "data_args.bin"))
