@@ -154,6 +154,11 @@ class DataArguments:
     Using `HfArgumentParser` we can turn this class into argparse arguments to be able to specify 
     them on the command line. Structure follows from run_glue.py from Transformers.
     """
+    int_to_text: Optional[List[str]] = field (
+        default_factory=list, metadata = {
+            "help": "For T5 only: convert classication id to text"
+        }
+    )
     compute_predict_results: Optional[bool] = field (
         default=False, metadata= {
             "help": "Should we also compute metrics for the prediction (test) set; if yes, then the"
@@ -238,9 +243,14 @@ class DataArguments:
     overwrite_cache: bool = field(
         default=False, metadata={"help": "Overwrite the cached preprocessed datasets or not."}
     )
-    input_key: str = field (
+    sentence1_key: str = field (
         default = "input", metadata = {
-            "help": "The name of the column that contains the input sequences to the model."
+            "help": "The name of the column that contains the first input sequences to the model."
+        }
+    )
+    sentence2_key: str = field (
+        default = "input", metadata = {
+            "help": "The name of the column that contains the second input sequences to the model."
         }
     )
     do_early_stopping: bool = field (

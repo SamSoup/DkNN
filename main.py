@@ -34,6 +34,7 @@ from ComputeAndSaveTrainRepTrainer import ComputeAndSaveTrainRepTrainer
 from ComputeAndSaveConformalScoresTrainer import ComputeAndSaveConformalScoresTrainer
 from DeepKNearestNeighborTrainer import DeepKNearestNeighborTrainer
 from CustomLossTrainer import CustomLossTrainer
+from CustomSeqToSeqTrainer import CustomSeq2SeqTrainer
 from EmbeddingPooler import EmbeddingPooler
 from sklearn.metrics import DistanceMetric
 from sklearn.metrics.pairwise import cosine_distances
@@ -41,6 +42,7 @@ import numpy as np
 import torch.nn as nn
 import os
 import torch
+import pprint
 import logging
 import sys
 import math
@@ -153,7 +155,7 @@ def main():
         test_data = read_data(data_args.test_file)
 
     if 't5' in model_args.model_name_or_path:
-        intToText = ['nonhate', 'hate']
+        intToText = data_args.int_to_text
         train_data['label'] = list(map(lambda x: intToText[x], train_data['label']))
         eval_data['label'] = list(map(lambda x: intToText[x], eval_data['label']))
         test_data['label'] = list(map(lambda x: intToText[x], test_data['label']))
@@ -195,6 +197,9 @@ def main():
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
+    sentence1_key, sentence2_key = data_args.sentence1_key, data_args.sentence2_key
+    # if 'bart' in model_args.model_name_or_path and sentence2_key != "none":
+    #     tokenizer.sep_token = "<sep>" # because eos and sep both use </s>, use this instead
     if 'gpt2' in model_args.model_name_or_path:
         # GPT-2 is a text generative model which its last token embedding to 
         # predict subsequent tokens. Therefore unlike BERT which uses its first 
@@ -205,7 +210,7 @@ def main():
         tokenizer.pad_token = tokenizer.eos_token
         config.pad_token_id = config.eos_token_id
         # tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-    if 'xlnet' in model_args.model_name_or_path or gpt2 in model_args.model_name_or_path:
+    if 'xlnet' in model_args.model_name_or_path or 'gpt2' in model_args.model_name_or_path:
         training_args.dataloader_drop_last = True
     if 't5' in model_args.model_name_or_path:
         # need to run tokenzier on dataset
@@ -267,12 +272,14 @@ def main():
 
     def preprocess_function(examples):
         # Tokenize the texts - input only
-        args = ((examples[data_args.input_key],))
+        args = (
+            (examples[sentence1_key],) if sentence2_key == "none" else (examples[sentence1_key], examples[sentence2_key])
+        )
         result = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
 
         # Map labels to IDs, if not t5
         if "label" in examples:
-            if 't5' in model_args.model_name_or_path :
+            if 't5' in model_args.model_name_or_path:
                 result["label"] = tokenizer(examples["label"], 
                                             padding=True, 
                                             max_length=max_seq_length, 
@@ -315,6 +322,7 @@ def main():
     # Custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
     # predictions and label_ids field) and has to return a dictionary string to float.
     metric_descs = data_args.evaluation_metrics
+    agg = ['micro', 'macro', 'weighted']
     def compute_metrics(p: EvalPrediction) -> Dict[str, float]:
         computed_scores = {}
         preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
@@ -324,39 +332,40 @@ def main():
         # see datasets.list_metrics() for the complete list
         for metric_desc in metric_descs:
             metric_func = load_metric(metric_desc)
-            computed_scores[metric_desc] = metric_func.compute(predictions=preds, references=p.label_ids)[metric_desc]
+            if num_labels > 2:
+                for avg in agg:
+                    if "accuracy" not in metric_desc:
+                        computed_scores[f"{avg}_{metric_desc}"] = metric_func.compute(predictions=preds, references=p.label_ids, average=avg)[metric_desc]
+                    else:
+                        computed_scores[metric_desc]  = metric_func.compute(predictions=preds, references=p.label_ids)[metric_desc]
+            else:
+                computed_scores[metric_desc] = metric_func.compute(predictions=preds, references=p.label_ids)[metric_desc]
         # get per-class f1 too, if we want f1
         if "f1" in metric_descs:
             f1_scores = load_metric("f1").compute(predictions=preds, references=p.label_ids, average=None)["f1"]
-            computed_scores["f1-negative"] = f1_scores[0]
-            computed_scores["f1-positive"] = f1_scores[1]
+            for i, l in enumerate(label_list):
+                computed_scores[f"f1-{l}"] = f1_scores[i]
         return computed_scores
 
-    metric = load_metric("sacrebleu")
     def postprocess_text(preds, labels):
         preds = [pred.strip() for pred in preds]
-        labels = [[label.strip()] for label in labels]
-
+        labels = [label.strip() for label in labels]
         return preds, labels
+
     generative_label_to_id = { label: i for i, label in enumerate(label_list) }
     def compute_metrics_generative(eval_preds):
-        preds, labels = eval_preds
-        if isinstance(preds, tuple):
-            preds = preds[0]
+        preds, labels = eval_preds.predictions, eval_preds.label_ids
         decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
         decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
-
         # Some simple post-processing
         decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
         # convert text to ids
         decoded_preds_ids = np.array(list(map(lambda x: generative_label_to_id[x] if x in generative_label_to_id else -1, 
                                               decoded_preds)))
-        decoded_labels_ids = np.array(list(map(lambda x: generative_label_to_id[x[0]] if x[0] in generative_label_to_id else -1, 
+        decoded_labels_ids = np.array(list(map(lambda x: generative_label_to_id[x] if x in generative_label_to_id else -1, 
                                                decoded_labels)))
         p = EvalPrediction(predictions=decoded_preds_ids, label_ids=decoded_labels_ids)
         result = compute_metrics(p)
-        #result = metric.compute(predictions=decoded_preds, references=decoded_labels)
-        #result = {"bleu": result["score"]}
 
         prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds]
         result["gen_len"] = np.mean(prediction_lens)
@@ -378,6 +387,10 @@ def main():
         callbacks = [EarlyStoppingCallback(early_stopping_patience=data_args.early_stopping_patience)]
 
     # Initialize our Trainer
+    if DKNN_args.save_database_path is not None:
+        p = EmbeddingPooler()
+        poolers = list(map(p.get, DKNN_args.poolers_to_use))
+
     if data_args.do_weighted_cross_entropy_loss:
         train_class_weights = torch.tensor(data_args.weights_per_class).to(device)
         trainer = CustomLossTrainer(
@@ -396,7 +409,7 @@ def main():
         training_args.generation_max_length = config.max_length
         training_args.generation_num_beams = config.num_beams
         training_args.predict_with_generate = True
-        trainer = Seq2SeqTrainer(
+        trainer = CustomSeq2SeqTrainer(
             model=model,
             args=training_args,
             train_dataset=train_data if training_args.do_train else None,
@@ -405,6 +418,9 @@ def main():
             data_collator=data_collator,
             callbacks=callbacks,
             compute_metrics=compute_metrics_generative,
+            save_reps_path=DKNN_args.save_database_path,
+            layers_to_save=DKNN_args.layers_to_save,
+            poolers_to_use=poolers if DKNN_args.save_database_path is not None else None
         )
     else:
         trainer = SaveLogitsTrainer(
@@ -416,7 +432,10 @@ def main():
             tokenizer=tokenizer,
             data_collator=data_collator,
             callbacks=callbacks,
-            save_logits=data_args.save_logits
+            save_logits=data_args.save_logits,
+            save_reps_path=DKNN_args.save_database_path,
+            layers_to_save=DKNN_args.layers_to_save,
+            poolers_to_use=poolers if DKNN_args.save_database_path is not None else None
         )
 
     # detect last checkpt
@@ -567,10 +586,10 @@ def main():
         if 't5' in model_args.model_name_or_path or 'xlnet' in model_args.model_name_or_path:
             metrics = trainer.evaluate(eval_dataset=test_data, 
                                        metric_key_prefix="predict")
-            max_eval_samples = (
-                data_args.max_eval_samples if data_args.max_eval_samples is not None else len(eval_data)
+            max_test_samples = (
+                data_args.max_test_samples if data_args.max_test_samples is not None else len(eval_data)
             )
-            metrics["predict_samples"] = min(max_eval_samples, len(test_data))
+            metrics["predict_samples"] = min(max_test_samples, len(test_data))
             trainer.log_metrics("predict", metrics)
             trainer.save_metrics("predict", metrics)
             # predict_results = trainer.predict(

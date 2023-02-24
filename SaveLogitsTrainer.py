@@ -18,14 +18,25 @@ from transformers.modeling_utils import unwrap_model
 from transformers.trainer_pt_utils import nested_detach
 from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES
 from typing import Callable, Union, Optional, Dict, List, Tuple, Any
-from utils import find_signature_columns, remove_file_if_already_exists, remove_unused_columns, save_matrix_with_tags_to_file
+from utils import (
+    compute_layer_representations,
+    find_signature_columns,
+    get_hidden_states,
+    remove_file_if_already_exists,
+    remove_unused_columns,
+    save_database_after_stacking,
+    save_matrix_with_tags_to_file
+)
 from DeepKNearestNeighborClassifier import DeepKNearestNeighborClassifier
 from datasets import Dataset
+from transformers.utils import logging
 from packaging import version
 import torch.nn as nn
 import torch
 import os
-    
+
+logger = logging.get_logger(__name__)
+
 class SaveLogitsTrainer(Trainer):
     """Custom Trainer that uses allows user to specify whether logits should be saved
 
@@ -47,6 +58,9 @@ class SaveLogitsTrainer(Trainer):
         optimizers: Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR] = (None, None),
         preprocess_logits_for_metrics: Callable[[torch.Tensor, torch.Tensor], torch.Tensor] = None,
         save_logits: bool = False,
+        save_reps_path: str = None,
+        layers_to_save: List[int] = None,
+        poolers_to_use: List[Callable[[torch.Tensor, torch.Tensor], torch.Tensor]]=None
     ):
         """
         Arguments follows directly from Transformers.Trainer except the following:
@@ -57,13 +71,24 @@ class SaveLogitsTrainer(Trainer):
         torch.cuda.empty_cache() # save memory before iterating through dataset
         self.save_logits = save_logits
         self.save_logits_path = None
+        self.save_reps_path = save_reps_path # if not None, then save
+        self.layers_to_save = layers_to_save
+        self.poolers_to_use = poolers_to_use
         self._signature_columns = find_signature_columns(model, args)
         self._signature_columns += ["tag"]
 
     def evaluate(self, eval_dataset: Optional[Dataset] = None, ignore_keys: Optional[List[str]] = None, 
                  metric_key_prefix: str = "eval") -> Dict[str, float]:
         self._create_save_files(prefix=metric_key_prefix)
-        return super().evaluate(eval_dataset, ignore_keys, metric_key_prefix)
+        self.database = {}
+        
+        results = super().evaluate(eval_dataset, ignore_keys, metric_key_prefix)
+        if self.save_reps_path is not None:
+            logger.info("*** Saving Layer Representations ***")
+            save_database_after_stacking(
+                self.layers_to_save, self.save_reps_path, self.database
+            )
+        return results
 
     def compute_loss(self, model, inputs, return_outputs=False):
         """
@@ -76,7 +101,16 @@ class SaveLogitsTrainer(Trainer):
             labels = inputs.pop("labels")
         else:
             labels = None
-        outputs = model(**inputs)
+        outputs = model(**inputs,
+                        output_hidden_states=self.save_reps_path is not None)
+        if self.save_reps_path is not None:
+            hidden_states = get_hidden_states(self.model.config.is_encoder_decoder, outputs)
+            attention_mask = inputs.get("attention_mask", None).detach().cpu()
+            self.database = compute_layer_representations(
+                self.model.config.is_encoder_decoder, hidden_states, attention_mask, 
+                self.layers_to_save, self.poolers_to_use, self.database
+            )
+            torch.cuda.empty_cache()
         # Save past state if it exists
         # TODO: this needs to be fixed and made cleaner later.
         if self.args.past_index >= 0:
@@ -103,7 +137,14 @@ class SaveLogitsTrainer(Trainer):
     def predict(self, test_dataset: Dataset, ignore_keys: Optional[List[str]] = None, 
                 metric_key_prefix: str = "test") -> PredictionOutput:
         self._create_save_files(prefix=metric_key_prefix)
-        return super().predict(test_dataset, ignore_keys, metric_key_prefix)
+        self.database = {}
+        results = super().predict(test_dataset, ignore_keys, metric_key_prefix)
+        if self.save_reps_path is not None:
+            logger.info("*** Saving Layer Representations ***")
+            save_database_after_stacking(
+                self.layers_to_save, self.save_reps_path, self.database
+            )
+        return results
 
     def prediction_step(
         self,
@@ -163,10 +204,22 @@ class SaveLogitsTrainer(Trainer):
                 with self.compute_loss_context_manager():
                     if self.save_logits:
                         tags = inputs.pop("tag").cpu().detach().numpy()
-                    outputs = model(**inputs)
+                    outputs = model(
+                        **inputs, 
+                        output_hidden_states=self.save_reps_path is not None
+                    )
+                    if self.save_reps_path is not None:
+                        hidden_states = get_hidden_states(self.model.config.is_encoder_decoder, outputs)
+                        attention_mask = inputs.get("attention_mask", None).detach().cpu()
+                        self.database = compute_layer_representations(
+                            self.model.config.is_encoder_decoder, hidden_states, attention_mask, 
+                            self.layers_to_save, self.poolers_to_use, self.database
+                        )
+                    # save logits
                     logits = outputs["logits"]
                     if self.save_logits:
                         save_matrix_with_tags_to_file(self.save_logits_path, tags, outputs['logits'].cpu().detach().numpy())
+                    # save layer representations
                 # TODO: this needs to be fixed and made cleaner later.
                 if self.args.past_index >= 0:
                     self._past = outputs[self.args.past_index - 1]

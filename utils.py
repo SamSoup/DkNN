@@ -4,6 +4,7 @@ from transformers import (
     TrainingArguments
 )
 import random
+from tqdm.auto import tqdm
 from transformers.utils import find_labels, ModelOutput
 from packaging import version
 import datasets
@@ -135,6 +136,28 @@ def get_hidden_states(is_encoder_decoder: bool, outputs: ModelOutput) -> Tuple[t
     if is_encoder_decoder:
         return hidden_states_to_cpu(outputs["encoder_hidden_states"] + outputs["decoder_hidden_states"])
     return hidden_states_to_cpu(outputs["hidden_states"])
+
+def save_database_after_stacking(layers_to_save, save_reps_path, database):
+    for layer in tqdm(layers_to_save):
+        database[layer] = np.vstack(database[layer])
+        np.savetxt(os.path.join(save_reps_path, f"layer_{layer}.csv"), 
+                    database[layer], delimiter=",")
+
+def compute_layer_representations(is_encoder_decoder: bool, hidden_states,
+                                  attention_mask, layers_to_save, poolers_to_use,
+                                  database):
+    if attention_mask is None:
+        attention_mask = torch.ones(hidden_states[0].shape).detach().cpu()
+    for layer, pooler in zip(layers_to_save, poolers_to_use):
+        if is_encoder_decoder and layer >= len(hidden_states) / 2:
+            layer_rep_np = pooler(hidden_states[layer], torch.ones(hidden_states[layer].shape[:2]))
+        else:
+            layer_rep_np = pooler(hidden_states[layer], attention_mask)
+        if layer in database:
+            database[layer].append(layer_rep_np)
+        else:
+            database[layer] = [layer_rep_np]
+    return database
 
 def get_layer_representations(hidden_states: torch.tensor) -> torch.tensor:
     """
