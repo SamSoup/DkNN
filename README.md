@@ -63,6 +63,7 @@ python -m pip install sentence-transformers
 python -m pip install multipledispatch
 python -m pip install nltk gensim sacrebleu
 conda update --all
+conda install -c conda-forge umap-learn
 ```
 
 On TACC: add these flags to pip install
@@ -96,3 +97,5 @@ setwd("/work/06782/ysu707/ls6/DkNN")
 Three examples with premise only: 
 
 `Jumping with purple balls is so much fun!` without hypothesis are dropped
+
+Another three dropped

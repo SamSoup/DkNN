@@ -118,7 +118,6 @@ def hidden_states_to_cpu(hidden_states: Tuple[torch.tensor]) -> List[torch.tenso
     ret = []
     for state in hidden_states:
         ret.append(state.detach().cpu())
-        del state
     return ret
 
 def get_hidden_states(is_encoder_decoder: bool, outputs: ModelOutput) -> Tuple[torch.tensor]:
@@ -140,8 +139,9 @@ def get_hidden_states(is_encoder_decoder: bool, outputs: ModelOutput) -> Tuple[t
 def save_database_after_stacking(layers_to_save, save_reps_path, database):
     for layer in tqdm(layers_to_save):
         database[layer] = np.vstack(database[layer])
-        np.savetxt(os.path.join(save_reps_path, f"layer_{layer}.csv"), 
+        np.savetxt(os.path.join(save_reps_path, f"layer_{layer}.csv"),
                     database[layer], delimiter=",")
+        del database[layer] # save memory after saving
 
 def compute_layer_representations(is_encoder_decoder: bool, hidden_states,
                                   attention_mask, layers_to_save, poolers_to_use,

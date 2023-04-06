@@ -23,13 +23,14 @@ from utils import randargmax
 from typing import Dict
 from SaveLogitsTrainer import SaveLogitsTrainer
 from data import train_val_test_split, read_data
-from args import DKNNArguments, DataArguments, ModelArguments
+from args import ComputeEncodingsArguments, DKNNArguments, DataArguments, ModelArguments
 from transformers.trainer_utils import get_last_checkpoint, denumpify_detensorize, speed_metrics
 from datasets import load_metric, Dataset, load_dataset
 from NearestNeighborLogits import LogProbabilityLogitsFactory, ConformalLogitsFactory
 from NearestNeighborDistancesToWeightsFuncts import NearestNeighborDistancesToWeightsFuncts
 from NearestNeighborFinders import KDTreeNearestNeighborFactory, LocalitySensitiveHashingNearestNeighborFactory
 from DeepKNearestNeighborClassifier import DeepKNearestNeighborClassifier
+from ComputeEncodings import ComputeEncodings
 from ComputeAndSaveTrainRepTrainer import ComputeAndSaveTrainRepTrainer
 from ComputeAndSaveConformalScoresTrainer import ComputeAndSaveConformalScoresTrainer
 from DeepKNearestNeighborTrainer import DeepKNearestNeighborTrainer
@@ -121,13 +122,13 @@ def set_up_logging(training_args: TrainingArguments):
 def main():
     # See all possible arguments by passing the --help flag to this script.
     # parse the arguments
-    parser = HfArgumentParser((DKNNArguments, DataArguments, ModelArguments, TrainingArguments))
+    parser = HfArgumentParser((ComputeEncodingsArguments, DKNNArguments, DataArguments, ModelArguments, TrainingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
         # let's parse it to get our arguments.
-        DKNN_args, data_args, model_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        encoding_args, DKNN_args, data_args, model_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
     else:
-        DKNN_args, data_args, model_args, training_args = parser.parse_args_into_dataclasses()
+        encoding_args, DKNN_args, data_args, model_args, training_args = parser.parse_args_into_dataclasses()
 
     # logging
     set_up_logging(training_args)
@@ -137,6 +138,11 @@ def main():
     torch.manual_seed(training_args.seed)
     random.seed(training_args.seed)
     np.random.seed(training_args.seed)
+    torch.cuda.manual_seed(training_args.seed)
+
+    # Set a fixed value for the hash seed
+    os.environ["PYTHONHASHSEED"] = str(training_args.seed)
+    print(f"Random seed set as {training_args.seed}")
 
     # read in data
     # See more about loading any type of standard or custom dataset at
@@ -284,6 +290,9 @@ def main():
                                             padding=True, 
                                             max_length=max_seq_length, 
                                             truncation=True).input_ids
+                result["label"] = result["label"].masked_fill(
+                    result["label"] == tokenizer.pad_token_id, -100
+                )
             elif label_to_id is not None:
                 result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
         return result
@@ -352,7 +361,7 @@ def main():
         labels = [label.strip() for label in labels]
         return preds, labels
 
-    generative_label_to_id = { label: i for i, label in enumerate(label_list) }
+    generative_label_to_id = { label: i for i, label in enumerate(data_args.int_to_text) }
     def compute_metrics_generative(eval_preds):
         preds, labels = eval_preds.predictions, eval_preds.label_ids
         decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
@@ -360,10 +369,8 @@ def main():
         # Some simple post-processing
         decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
         # convert text to ids
-        decoded_preds_ids = np.array(list(map(lambda x: generative_label_to_id[x] if x in generative_label_to_id else -1, 
-                                              decoded_preds)))
-        decoded_labels_ids = np.array(list(map(lambda x: generative_label_to_id[x] if x in generative_label_to_id else -1, 
-                                               decoded_labels)))
+        decoded_preds_ids = np.array(list(map(lambda x: generative_label_to_id[x], decoded_preds)))
+        decoded_labels_ids = np.array(list(map(lambda x: generative_label_to_id[x], decoded_labels)))
         p = EvalPrediction(predictions=decoded_preds_ids, label_ids=decoded_labels_ids)
         result = compute_metrics(p)
 
@@ -386,11 +393,46 @@ def main():
     if data_args.do_early_stopping:
         callbacks = [EarlyStoppingCallback(early_stopping_patience=data_args.early_stopping_patience)]
 
-    # Initialize our Trainer
-    if DKNN_args.save_database_path is not None:
-        p = EmbeddingPooler()
-        poolers = list(map(p.get, DKNN_args.poolers_to_use))
+    p = EmbeddingPooler()
+    poolers = list(map(p.get, encoding_args.poolers_to_use))
 
+    # Compute Representations
+    if encoding_args.do_compute_encodings:
+        # if 't5' in model_args.model_name_or_path:
+        #     training_args.generation_max_length = config.max_length
+        #     training_args.generation_num_beams = config.num_beams
+        #     training_args.predict_with_generate = True
+        #     trainer = CustomSeq2SeqTrainer(
+        #         model=model,
+        #         args=training_args,
+        #         train_dataset=train_data if training_args.do_train else None,
+        #         eval_dataset=eval_data if training_args.do_eval else None,
+        #         tokenizer=tokenizer,
+        #         data_collator=data_collator,
+        #         callbacks=callbacks,
+        #         compute_metrics=compute_metrics_generative,
+        #         save_reps_path=encoding_args.save_eval_encodings_path,
+        #         layers_to_save=encoding_args.layers_to_save,
+        #         poolers_to_use=poolers
+        #     )
+        # else:
+            encoder = ComputeEncodings(
+                model=model,
+                args=training_args,
+                train_dataset=train_data,
+                eval_dataset=eval_data,
+                test_dataset=test_data,
+                tokenizer=tokenizer,
+                data_collator=data_collator,
+                layers_to_save=encoding_args.layers_to_save,
+                poolers=poolers,
+                save_train_encodings_path=encoding_args.save_train_encodings_path,
+                save_eval_encodings_path=encoding_args.save_eval_encodings_path,
+                save_test_encodings_path=encoding_args.save_test_encodings_path,
+            )
+            encoder.compute_and_save_encodings()
+
+    # Initialize our Trainer
     if data_args.do_weighted_cross_entropy_loss:
         train_class_weights = torch.tensor(data_args.weights_per_class).to(device)
         trainer = CustomLossTrainer(
@@ -419,7 +461,7 @@ def main():
             callbacks=callbacks,
             compute_metrics=compute_metrics_generative,
             save_reps_path=DKNN_args.save_database_path,
-            layers_to_save=DKNN_args.layers_to_save,
+            layers_to_save=encoding_args.layers_to_save,
             poolers_to_use=poolers if DKNN_args.save_database_path is not None else None
         )
     else:
@@ -434,7 +476,7 @@ def main():
             callbacks=callbacks,
             save_logits=data_args.save_logits,
             save_reps_path=DKNN_args.save_database_path,
-            layers_to_save=DKNN_args.layers_to_save,
+            layers_to_save=encoding_args.layers_to_save,
             poolers_to_use=poolers if DKNN_args.save_database_path is not None else None
         )
 
@@ -471,7 +513,7 @@ def main():
     if DKNN_args.do_DKNN:
         # get the poolers for the hidden states
         p = EmbeddingPooler()
-        poolers = list(map(p.get, DKNN_args.poolers_to_use))
+        poolers = list(map(p.get, encoding_args.poolers_to_use))
 
         # first, we compute the representations for all training examples
         saveTrainRepTrainer = ComputeAndSaveTrainRepTrainer(
@@ -480,7 +522,7 @@ def main():
             data_collator=data_collator,
             tokenizer=tokenizer,
             train_dataset=train_data,
-            layers_to_save=DKNN_args.layers_to_save,
+            layers_to_save=encoding_args.layers_to_save,
             poolers = poolers,
             read_from_database_path=DKNN_args.read_from_database_path,
             save_database_path=DKNN_args.save_database_path,
@@ -495,7 +537,7 @@ def main():
         if DKNN_args.neighbor_method == "KD-Tree":
             nearestNeighborFactory = KDTreeNearestNeighborFactory(
                 K=DKNN_args.K, 
-                layers_to_save=DKNN_args.layers_to_save, 
+                layers_to_save=encoding_args.layers_to_save, 
                 database=database,
                 layer_dim=model.config.hidden_size,
                 dist_metric=dist_funct,
@@ -504,7 +546,7 @@ def main():
         elif DKNN_args.neighbor_method == "LSH":
             nearestNeighborFactory = LocalitySensitiveHashingNearestNeighborFactory(
                 K=DKNN_args.K, 
-                layers_to_save=DKNN_args.layers_to_save, 
+                layers_to_save=encoding_args.layers_to_save, 
                 database=database, 
                 layer_dim=model.config.hidden_size,
                 dist_metric=dist_funct,
@@ -530,7 +572,7 @@ def main():
                 args=training_args,
                 caliberation_dataset=eval_data,
                 data_collator=data_collator,
-                layers_to_save=DKNN_args.layers_to_save,
+                layers_to_save=encoding_args.layers_to_save,
                 poolers = poolers,
                 tokenizer=tokenizer,
                 nearestNeighborFunction=nearestNeighborFinderFunction,
@@ -562,7 +604,7 @@ def main():
             data_collator=data_collator,
             tokenizer=tokenizer,
             compute_metrics=compute_metrics,
-            layers_to_save=DKNN_args.layers_to_save,
+            layers_to_save=encoding_args.layers_to_save,
             poolers = poolers,
             classifier=classifier,
             save_logits=data_args.save_logits,
@@ -646,6 +688,7 @@ def main():
     # finally, save the data arguments and DKNN arguments 
     torch.save(data_args, os.path.join(training_args.output_dir, "data_args.bin"))
     torch.save(DKNN_args, os.path.join(training_args.output_dir, "DKNN_args.bin"))
+    torch.save(encoding_args, os.path.join(training_args.output_dir, "encoding_args.bin"))
 
 if __name__ == "__main__":
     main()

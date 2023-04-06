@@ -10,6 +10,53 @@ import numpy as np
 import os
 
 @dataclass
+class ComputeEncodingsArguments:
+    do_compute_encodings: Optional[bool] = field (
+        default = False, metadata = {
+            "help": "Should compute representation?"
+        }
+    )
+    save_train_encodings_path: Optional[str] = field (
+        default = None, metadata = {
+            "help": "If not none, save the training representations at "
+            "specified path"
+        }
+    )
+    save_eval_encodings_path: Optional[str] = field (
+        default = None, metadata = {
+            "help": "If not none, save the validation set representations at "
+            "specified path"
+        }
+    )
+    save_test_encodings_path: Optional[str] = field (
+        default = None, metadata = {
+            "help": "If not none, save the test set representations at "
+            "specified path"
+        }
+    )
+    layers_to_save: Optional[List[int]] = field (
+        default_factory=list, metadata = {
+            "help": "A list of layers to save its representation for (DkNN only) in python list format;"
+        }
+    )
+    layers_to_save_desc: Optional[str] = field (
+        default=None, metadata = {
+            "help": "A simplified word description of the meaning of the layers to save"
+        }
+    )
+    poolers_to_use: Optional[List[str]] = field (
+        default_factory=list, metadata = {
+            "help": "A list of pooler methods to use to save its representation for (DkNN only) in python list format;"
+            "Must have matching length with layers_to_save"
+        }
+    )
+    poolers_to_use_desc: Optional[List[str]] = field (
+        default=None, metadata = {
+            "help": "A simplified word description of the meaning of the poolers to use"
+        }
+    )
+
+@dataclass
 class DKNNArguments:
     """
     Arguments pertaining specifically for Deek K Nearest Neighbor Configurations
@@ -35,27 +82,6 @@ class DKNNArguments:
     K: Optional[int] = field (
         default = 10, metadata = {
             "help": "If DkNN_method is not None, how many neighbors to retrieve per layer per example"
-        }
-    )
-    layers_to_save: Optional[List[int]] = field (
-        default_factory=list, metadata = {
-            "help": "A list of layers to save its representation for (DkNN only) in python list format;"
-        }
-    )
-    layers_to_save_desc: Optional[str] = field (
-        default=None, metadata = {
-            "help": "A simplified word description of the meaning of the layers to save"
-        }
-    )
-    poolers_to_use: Optional[List[str]] = field (
-        default_factory=list, metadata = {
-            "help": "A list of pooler methods to use to save its representation for (DkNN only) in python list format;"
-            "Must have matching length with layers_to_save"
-        }
-    )
-    poolers_to_use_desc: Optional[List[str]] = field (
-        default=None, metadata = {
-            "help": "A simplified word description of the meaning of the poolers to use"
         }
     )
     read_from_database_path: bool = field (

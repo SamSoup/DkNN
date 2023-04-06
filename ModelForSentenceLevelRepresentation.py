@@ -147,7 +147,9 @@ def get_model_for_representation(model_name_or_path,
                                  num_labels=2, # binary classification
                                  ignore_mismatched_sizes=False,
                                  cache_dir="/work/06782/ysu707/ls6/DkNN/.cache",
-                                 max_seq_length = 1024):
+                                 max_seq_length = 1024,
+                                 sentence1_key: Optional[str] = "text",
+                                 sentence2_key: Optional[str] = "none",):
     # Load pretrained model and tokenizer for training
     config = AutoConfig.from_pretrained(
         model_name_or_path,
@@ -170,7 +172,7 @@ def get_model_for_representation(model_name_or_path,
         cache_dir=cache_dir,
         use_fast=False
     )
-    
+
     if "t5" in config.model_type:
         model = AutoModelForSeq2SeqLM.from_pretrained(
             model_name_or_path,
@@ -189,6 +191,8 @@ def get_model_for_representation(model_name_or_path,
         )
 
     m = ModelForSentenceLevelRepresentation(
+        sentence1_key=sentence1_key,
+        sentence2_key=sentence2_key,
         tokenizer=tokenizer,
         model=model.cuda() if torch.cuda.is_available() else model
     )

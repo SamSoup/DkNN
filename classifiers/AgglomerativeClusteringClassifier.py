@@ -22,10 +22,28 @@ from collections import Counter
 from utils_copy import find_majority
 
 class AgglomerativeClusteringClassifier(BaseEstimator, ClassifierMixin):
-    def __init__(self, max_depth=1, **kwargs):
-        # this takes in all keyword that AgglomerativeClustering takes
-        self.kwargs = kwargs
+    def __init__(
+        self,
+        max_depth=1,
+        n_clusters=2,
+        *,
+        affinity="euclidean",
+        memory=None,
+        connectivity=None,
+        compute_full_tree="auto",
+        linkage="ward",
+        distance_threshold=None,
+        compute_distances=False,
+    ):
         self.max_depth = max_depth
+        self.n_clusters = n_clusters
+        self.distance_threshold = distance_threshold
+        self.memory = memory
+        self.connectivity = connectivity
+        self.compute_full_tree = compute_full_tree
+        self.linkage = linkage
+        self.affinity = affinity
+        self.compute_distances = compute_distances
 
     def _find_samples_per_node(self):
         """
@@ -57,8 +75,17 @@ class AgglomerativeClusteringClassifier(BaseEstimator, ClassifierMixin):
         self.X_ = X
         self.y_ = y
         
-        self.m_ = AgglomerativeClustering(**self.kwargs).fit(self.X_)
-        
+        self.m_ = AgglomerativeClustering(
+            n_clusters = self.n_clusters,
+            distance_threshold = self.distance_threshold,
+            memory = self.memory,
+            connectivity = self.connectivity,
+            compute_full_tree = self.compute_full_tree,
+            linkage = self.linkage,
+            affinity = self.affinity,
+            compute_distances = self.compute_distances
+        ).fit(self.X_)
+
         ii = itertools.count(self.X_.shape[0])
         self.node_to_children_ = {
             next(ii): {'left': x[0], 'right':x[1]} for x in self.m_.children_
@@ -106,7 +133,6 @@ class AgglomerativeClusteringClassifier(BaseEstimator, ClassifierMixin):
         )
 
     def get_params(self, deep=True):
-        # suppose this estimator has parameters "alpha" and "recursive"
         return self.__dict__
 
     def set_params(self, **parameters):

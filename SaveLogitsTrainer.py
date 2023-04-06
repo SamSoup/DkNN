@@ -33,6 +33,7 @@ from transformers.utils import logging
 from packaging import version
 import torch.nn as nn
 import torch
+import gc
 import os
 
 logger = logging.get_logger(__name__)
@@ -95,22 +96,47 @@ class SaveLogitsTrainer(Trainer):
         How the loss is computed by Trainer. By default, all models return the loss in the first element.
         Subclass and override for custom behavior.
         """
+        # print("Before hidden states:")
+        # print(torch.cuda.memory_summary())
         if self.save_logits_path is not None and self.save_logits:
             tags = inputs.pop("tag").cpu().detach().numpy()
         if self.label_smoother is not None and "labels" in inputs:
             labels = inputs.pop("labels")
         else:
             labels = None
-        outputs = model(**inputs,
-                        output_hidden_states=self.save_reps_path is not None)
+        if model.training or self.save_reps_path is None:
+            outputs = model(**inputs)
+        else:
+            with torch.no_grad():
+                outputs = model(
+                    **inputs,
+                    output_hidden_states=self.save_reps_path is not None
+                )
+        attention_mask = inputs.get("attention_mask", None).detach().cpu()
+        for k, tensor in inputs.items():
+            del tensor
+        del inputs
         if self.save_reps_path is not None:
             hidden_states = get_hidden_states(self.model.config.is_encoder_decoder, outputs)
-            attention_mask = inputs.get("attention_mask", None).detach().cpu()
             self.database = compute_layer_representations(
                 self.model.config.is_encoder_decoder, hidden_states, attention_mask, 
                 self.layers_to_save, self.poolers_to_use, self.database
             )
+            if self.model.config.is_encoder_decoder:
+                del outputs.encoder_hidden_states
+                del outputs.decoder_hidden_states
+                outputs.encoder_hidden_states = None
+                outputs.decoder_hidden_states = None
+            else:
+                del outputs.hidden_states
+                outputs.hidden_states = None
+            del hidden_states
+            # print("here!\n\n")
+            # print("After hidden states:")
+            gc.collect()
             torch.cuda.empty_cache()
+            # print(torch.cuda.memory_summary())
+            
         # Save past state if it exists
         # TODO: this needs to be fixed and made cleaner later.
         if self.args.past_index >= 0:
@@ -204,17 +230,31 @@ class SaveLogitsTrainer(Trainer):
                 with self.compute_loss_context_manager():
                     if self.save_logits:
                         tags = inputs.pop("tag").cpu().detach().numpy()
-                    outputs = model(
-                        **inputs, 
-                        output_hidden_states=self.save_reps_path is not None
-                    )
+                    if model.training or self.save_reps_path is None:
+                        outputs = model(**inputs)
+                    else:
+                        outputs = model(
+                            **inputs, 
+                            output_hidden_states=self.save_reps_path is not None
+                        )
                     if self.save_reps_path is not None:
                         hidden_states = get_hidden_states(self.model.config.is_encoder_decoder, outputs)
+                        if self.model.config.is_encoder_decoder:
+                            del outputs.encoder_hidden_states
+                            del outputs.decoder_hidden_states
+                            outputs.encoder_hidden_states = None
+                            outputs.decoder_hidden_states = None
+                        else:
+                            del outputs.hidden_states
+                            outputs.hidden_states = None
+                        # del hidden_states
                         attention_mask = inputs.get("attention_mask", None).detach().cpu()
                         self.database = compute_layer_representations(
                             self.model.config.is_encoder_decoder, hidden_states, attention_mask, 
                             self.layers_to_save, self.poolers_to_use, self.database
                         )
+                        del hidden_states
+                        torch.cuda.empty_cache()
                     # save logits
                     logits = outputs["logits"]
                     if self.save_logits:

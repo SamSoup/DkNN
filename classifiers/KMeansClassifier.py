@@ -32,7 +32,6 @@ class KMeansClassifier(BaseEstimator, ClassifierMixin):
             labels = self.y_[mask]
             p = find_majority(labels)
             self.cluster_indices_to_label_[i] = p
-
         return self
 
     def predict(self, X):
