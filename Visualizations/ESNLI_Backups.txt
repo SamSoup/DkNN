@@ -1,0 +1,371 @@
+0 = entailment
+1 = neutral 
+2 = contradiction
+
+Example idx 0
+{'dt_explanation_1': 'A group of teenage boys on a road jumping joyfully.A '
+                     'group of teen boys are playing street hockey and jumping '
+                     'joyfully whenever someone scores.',
+ 'dt_explanation_2': 'A girl wearing green twists something in her hands.A '
+                     'girl wearing green twists the twisty tie back onto a '
+                     'loaf of bread.',
+ 'dt_explanation_3': 'An older Asian women is showing off some vegetables she '
+                     'just collected from a field.A woman is showing her '
+                     'grandsons the vegetables she just picked.',
+ 'dt_explanation_4': 'A man in orange is holding up a bicycle near a crowd.A '
+                     'man holds up his new bicycle to his family.',
+ 'dt_explanation_5': 'Two black women, both wearing yellow patterned dresses, '
+                     'are looking into plastic bags with yellow fabric '
+                     'coverings.The two homeless black women in dresses are '
+                     'looking for food in plastic bags.',
+ 'dt_predictions': 1,
+ 'explanation_1': 'The to go packages may not be from lunch.',
+ 'explanation_2': 'Just because two women are embracing, does not mean they '
+                  'are sisters.  Two women that are embracing are not '
+                  'necessarily hugging goodbye.',
+ 'explanation_3': 'Two women do not have to be sisters.  Embracing does not '
+                  'mean hugging goodbye.  The women do not have to have just '
+                  'finished lunch to be embracing.',
+ 'knn_explanation_1': 'A group of teenage boys on a road jumping joyfully.A '
+                      'group of teen boys are playing street hockey and '
+                      'jumping joyfully whenever someone scores.',
+ 'knn_explanation_2': 'A girl wearing green twists something in her hands.A '
+                      'girl wearing green twists the twisty tie back onto a '
+                      'loaf of bread.',
+ 'knn_explanation_3': 'An older Asian women is showing off some vegetables she '
+                      'just collected from a field.A woman is showing her '
+                      'grandsons the vegetables she just picked.',
+ 'knn_explanation_4': 'A man in orange is holding up a bicycle near a crowd.A '
+                      'man holds up his new bicycle to his family.',
+ 'knn_explanation_5': 'Two black women, both wearing yellow patterned dresses, '
+                      'are looking into plastic bags with yellow fabric '
+                      'coverings.The two homeless black women in dresses are '
+                      'looking for food in plastic bags.',
+ 'knn_predictions': 1,
+ 'label': 1,
+ 'lmeans_explanation_1': 'Line of taxis waiting for passengers.Taxis wait for '
+                         'passengers at the airport.',
+ 'lmeans_explanation_2': 'Older men are sitting in chairs, reading '
+                         'newspapers.The men are relaxed.',
+ 'lmeans_explanation_3': 'An old woman in a blue sweater and black dress sits '
+                         'on a bench.The old woman is outside.',
+ 'lmeans_explanation_4': 'Group of asian children dressed in white shirts and '
+                         'hats performing with a crowd looking on.The group of '
+                         'Asian kids were entertainers',
+ 'lmeans_explanation_5': 'A man is holding a binder and is standing between a '
+                         'middle-aged woman and a middle-aged man.A man is '
+                         'talking to his parents.',
+ 'lmeans_predictions': 1,
+ 'svm_explanation_1': 'A group of teenage boys on a road jumping joyfully.A '
+                      'group of teen boys are playing street hockey and '
+                      'jumping joyfully whenever someone scores.',
+ 'svm_explanation_2': 'A girl wearing green twists something in her hands.A '
+                      'girl wearing green twists the twisty tie back onto a '
+                      'loaf of bread.',
+ 'svm_explanation_3': 'An older Asian women is showing off some vegetables she '
+                      'just collected from a field.A woman is showing her '
+                      'grandsons the vegetables she just picked.',
+ 'svm_explanation_4': 'A man in orange is holding up a bicycle near a crowd.A '
+                      'man holds up his new bicycle to his family.',
+ 'svm_explanation_5': 'Two black women, both wearing yellow patterned dresses, '
+                      'are looking into plastic bags with yellow fabric '
+                      'coverings.The two homeless black women in dresses are '
+                      'looking for food in plastic bags.',
+ 'svm_predictions': 1,
+ 'text': 'Two women are embracing while holding to go packages.The sisters are '
+         'hugging goodbye while holding to go packages after just eating '
+         'lunch.'}
+
+Example idx 1
+{'dt_explanation_1': 'Two boys show off their stained, blue tongues.boys are '
+                     'showing their tongues.',
+ 'dt_explanation_2': 'Four males are washing dishes at kitchen sinks.Dishes '
+                     'are being washed.',
+ 'dt_explanation_3': 'A backhoe destroys a building covered in graffiti.A '
+                     'building is being destroyed.',
+ 'dt_explanation_4': 'Two women standing by cars with a shopping cart.The '
+                     'women are by the cart.',
+ 'dt_explanation_5': 'Women puts on shoe while leaning against a '
+                     'storefront.Woman is putting on shoe.',
+ 'dt_predictions': 0,
+ 'explanation_1': 'Saying the two women are holding packages is a way to '
+                  'paraphrase that the packages they are holding are to go '
+                  'packages.',
+ 'explanation_2': 'Sentence 1 states that two women are holding to-go '
+                  'packages. To-go packages are a form of package.',
+ 'explanation_3': 'Women can embrace while they are holding packages.',
+ 'knn_explanation_1': 'Two boys show off their stained, blue tongues.boys are '
+                      'showing their tongues.',
+ 'knn_explanation_2': 'Four males are washing dishes at kitchen sinks.Dishes '
+                      'are being washed.',
+ 'knn_explanation_3': 'A backhoe destroys a building covered in graffiti.A '
+                      'building is being destroyed.',
+ 'knn_explanation_4': 'Two women standing by cars with a shopping cart.The '
+                      'women are by the cart.',
+ 'knn_explanation_5': 'Women puts on shoe while leaning against a '
+                      'storefront.Woman is putting on shoe.',
+ 'knn_predictions': 0,
+ 'label': 0,
+ 'lmeans_explanation_1': 'This young child is having fun on their first '
+                         'downhill sled ride.A child on a sled.',
+ 'lmeans_explanation_2': "A woman walks toward a janitor that's wearing a "
+                         'raincoat and pushing a cleaning cart.A woman is '
+                         'walking approaching a janitor.',
+ 'lmeans_explanation_3': 'A maid in a white uniform sweeps the floor.A maid is '
+                         'cleaning.',
+ 'lmeans_explanation_4': 'A young boy wearing blue is standing next to a large '
+                         'red ball in a field.A boy in blue stands in a field.',
+ 'lmeans_explanation_5': 'A person stands on the peaks of snow and ice.The '
+                         'person is standing on top of a snow & ice capped '
+                         'mountain.',
+ 'lmeans_predictions': 0,
+ 'svm_explanation_1': 'Two boys show off their stained, blue tongues.boys are '
+                      'showing their tongues.',
+ 'svm_explanation_2': 'Four males are washing dishes at kitchen sinks.Dishes '
+                      'are being washed.',
+ 'svm_explanation_3': 'A backhoe destroys a building covered in graffiti.A '
+                      'building is being destroyed.',
+ 'svm_explanation_4': 'Two women standing by cars with a shopping cart.The '
+                      'women are by the cart.',
+ 'svm_explanation_5': 'Women puts on shoe while leaning against a '
+                      'storefront.Woman is putting on shoe.',
+ 'svm_predictions': 0,
+ 'text': 'Two women are embracing while holding to go packages.Two woman are '
+         'holding packages.'}
+
+{'dt_explanation_1': 'This young child is having fun on their first downhill '
+                     'sled ride.A child on a sled.',
+ 'dt_explanation_2': 'Two older men competing in a game of chess.Two men play '
+                     'chess.',
+ 'dt_explanation_3': 'Two teen girls compete against one another in a soccer '
+                     'match.Two girls play soccer.',
+ 'dt_explanation_4': 'Young people playing with a long jump rope in the '
+                     'street.People playing jump rope.',
+ 'dt_explanation_5': 'Several groups of people are enjoying a ride on a ferry '
+                     'boat.People riding on a ferry.',
+ 'dt_predictions': 0,
+ 'explanation_1': 'If people are taking a fun train ride it means the ride the '
+                  'train.',
+ 'explanation_2': 'People taking a train ride is synonymous of riding a train.',
+ 'explanation_3': 'Group of people are people, and train ride is a rephrasing '
+                  'of ride the train.',
+ 'knn_explanation_1': 'This young child is having fun on their first downhill '
+                      'sled ride.A child on a sled.',
+ 'knn_explanation_2': 'Two older men competing in a game of chess.Two men play '
+                      'chess.',
+ 'knn_explanation_3': 'Two teen girls compete against one another in a soccer '
+                      'match.Two girls play soccer.',
+ 'knn_explanation_4': 'Young people playing with a long jump rope in the '
+                      'street.People playing jump rope.',
+ 'knn_explanation_5': 'Several groups of people are enjoying a ride on a ferry '
+                      'boat.People riding on a ferry.',
+ 'knn_predictions': 0,
+ 'label': 0,
+ 'lmeans_explanation_1': 'This young child is having fun on their first '
+                         'downhill sled ride.A child on a sled.',
+ 'lmeans_explanation_2': 'A maid in a white uniform sweeps the floor.A maid is '
+                         'cleaning.',
+ 'lmeans_explanation_3': 'A young boy wearing blue is standing next to a large '
+                         'red ball in a field.A boy in blue stands in a field.',
+ 'lmeans_explanation_4': "A woman walks toward a janitor that's wearing a "
+                         'raincoat and pushing a cleaning cart.A woman is '
+                         'walking approaching a janitor.',
+ 'lmeans_explanation_5': 'A person stands on the peaks of snow and ice.The '
+                         'person is standing on top of a snow & ice capped '
+                         'mountain.',
+ 'lmeans_predictions': 0,
+ 'svm_explanation_1': 'This young child is having fun on their first downhill '
+                      'sled ride.A child on a sled.',
+ 'svm_explanation_2': 'Two older men competing in a game of chess.Two men play '
+                      'chess.',
+ 'svm_explanation_3': 'Two teen girls compete against one another in a soccer '
+                      'match.Two girls play soccer.',
+ 'svm_explanation_4': 'Young people playing with a long jump rope in the '
+                      'street.People playing jump rope.',
+ 'svm_explanation_5': 'Several groups of people are enjoying a ride on a ferry '
+                      'boat.People riding on a ferry.',
+ 'svm_predictions': 0,
+ 'text': 'A group of people are taking a fun train ride.People ride the train.'}
+
+{'dt_explanation_1': 'This is a headshot of a young dark-skinned girl wearing '
+                     'a blue hankie and blue sweater looking over her shoulder '
+                     'into the camera.A girl is not looking at the camera.',
+ 'dt_explanation_2': 'Two children, sitting on the backs of camels, near the '
+                     'ocean.The children are not near the ocean.',
+ 'dt_explanation_3': 'The mountain climbers set up camp at the apex.They are '
+                     'not making camp at the apex.',
+ 'dt_explanation_4': 'Two women are talking to a young boy while playing '
+                     'cards.The woman are not playing a game.',
+ 'dt_explanation_5': '2 People with white hats looking over the mountainOne '
+                     'person is looking at the mountain.',
+ 'dt_predictions': 2,
+ 'explanation_1': "If only one woman is wearing a headscarf, then she can't be "
+                  'walking next to another woman wearing a headscarf.',
+ 'explanation_2': "The woman can't be walking beside a woman if there is only "
+                  'one woman.',
+ 'explanation_3': 'Both the middle eastern woman and the woman in a the purple '
+                  'headscarf are wearing headscarves.',
+ 'knn_explanation_1': 'A mom has fallen asleep holding her son inside a boat.a '
+                      'woman and a boy are awake',
+ 'knn_explanation_2': 'This is a headshot of a young dark-skinned girl wearing '
+                      'a blue hankie and blue sweater looking over her '
+                      'shoulder into the camera.A girl is not looking at the '
+                      'camera.',
+ 'knn_explanation_3': 'Two children, sitting on the backs of camels, near the '
+                      'ocean.The children are not near the ocean.',
+ 'knn_explanation_4': 'A man in a red shirt and jacket is looking to the side '
+                      'while surrounded by other men wearing helmets.The man '
+                      'is not looking to the side.',
+ 'knn_explanation_5': 'A little boy in a blue cap and blue shirt looks at a '
+                      'model while standing outside.The little boy is not '
+                      'standing.',
+ 'knn_predictions': 2,
+ 'label': 2,
+ 'lmeans_explanation_1': 'Two old men, one in yellow shirt, one in red, on '
+                         'park benches.Two men running on a track',
+ 'lmeans_explanation_2': 'A man with a red mohawk waiting at a red light.A '
+                         'woman with blonde hair waits for a green light.',
+ 'lmeans_explanation_3': 'A dog under a sheet.The dog is not an animal.',
+ 'lmeans_explanation_4': 'A young man crossing the street in front of an old '
+                         'apartment building on his way home from the store '
+                         'carrying a plastic grocery bag.Plastic grocery bags '
+                         'are not available in small countries.',
+ 'lmeans_explanation_5': 'A group of people looks up at a TV screen showing a '
+                         'football game, while two women stand beneath the '
+                         'screen talking.A bunch of men watch the world series '
+                         'while women talk on',
+ 'lmeans_predictions': 2,
+ 'svm_explanation_1': 'A mom has fallen asleep holding her son inside a boat.a '
+                      'woman and a boy are awake',
+ 'svm_explanation_2': 'This is a headshot of a young dark-skinned girl wearing '
+                      'a blue hankie and blue sweater looking over her '
+                      'shoulder into the camera.A girl is not looking at the '
+                      'camera.',
+ 'svm_explanation_3': 'Two children, sitting on the backs of camels, near the '
+                      'ocean.The children are not near the ocean.',
+ 'svm_explanation_4': 'A man in a red shirt and jacket is looking to the side '
+                      'while surrounded by other men wearing helmets.The man '
+                      'is not looking to the side.',
+ 'svm_explanation_5': 'A little boy in a blue cap and blue shirt looks at a '
+                      'model while standing outside.The little boy is not '
+                      'standing.',
+ 'svm_predictions': 2,
+ 'text': 'The middle eastern woman wearing the pink headscarf is walking '
+         'beside a woman in a purple headscarf.Only one woman is wearing a '
+         'head scarf.'}
+
+Example idx 78
+{'dt_explanation_1': 'A woman is sitting on a steps outdoors playing an '
+                     'accordion.Someone is playing a piano.',
+ 'dt_explanation_2': 'A man wearing a beige shirt and cowboy hat ropes a calf '
+                     'while riding a brown horse.The cowboy is riding a bull.',
+ 'dt_explanation_3': 'A young child and an older man are both petting a '
+                     'goat.The girl is petting a llama.',
+ 'dt_explanation_4': 'The man on the bike is riding next to a man holding a '
+                     'dog.A man with his cat.',
+ 'dt_explanation_5': 'A man selects a food item from a buffet table while a '
+                     'couple sits in the background.The couple are walking',
+ 'dt_predictions': 2,
+ 'explanation_1': 'A person cannot be singing and playing a saxophone '
+                  'simultaneously.',
+ 'explanation_2': "The man can't be singing while he is playing a saxophone.",
+ 'explanation_3': 'The man cannot be playing a saxophone while singing.',
+ 'knn_explanation_1': 'A woman is sitting on a steps outdoors playing an '
+                      'accordion.Someone is playing a piano.',
+ 'knn_explanation_2': 'A man wearing a beige shirt and cowboy hat ropes a calf '
+                      'while riding a brown horse.The cowboy is riding a bull.',
+ 'knn_explanation_3': 'A young child and an older man are both petting a '
+                      'goat.The girl is petting a llama.',
+ 'knn_explanation_4': 'The man on the bike is riding next to a man holding a '
+                      'dog.A man with his cat.',
+ 'knn_explanation_5': 'A man selects a food item from a buffet table while a '
+                      'couple sits in the background.The couple are walking',
+ 'knn_predictions': 2,
+ 'label': 2,
+ 'lmeans_explanation_1': 'Africans gather water at an outdoor tap.Africans are '
+                         'gathering rice for a meal.',
+ 'lmeans_explanation_2': 'A person in a room inspects some sort of '
+                         'equipment.There is a person bungee jumping for the '
+                         'first time.',
+ 'lmeans_explanation_3': 'A man sitting on a horse.A woman laying by a colt.',
+ 'lmeans_explanation_4': 'A group of guys on a pontoon boat out on the '
+                         'lake.The men are surfboarding in the ocean.',
+ 'lmeans_explanation_5': 'A person who is standing next to a motorcycle and '
+                         'waving in front of a small building, is dressed in '
+                         'pants, a jacket and a red scarf covering most of the '
+                         'face.a person is riding their motorcycle',
+ 'lmeans_predictions': 2,
+ 'svm_explanation_1': 'A woman is sitting on a steps outdoors playing an '
+                      'accordion.Someone is playing a piano.',
+ 'svm_explanation_2': 'A man wearing a beige shirt and cowboy hat ropes a calf '
+                      'while riding a brown horse.The cowboy is riding a bull.',
+ 'svm_explanation_3': 'A young child and an older man are both petting a '
+                      'goat.The girl is petting a llama.',
+ 'svm_explanation_4': 'The man on the bike is riding next to a man holding a '
+                      'dog.A man with his cat.',
+ 'svm_explanation_5': 'A man selects a food item from a buffet table while a '
+                      'couple sits in the background.The couple are walking',
+ 'svm_predictions': 2,
+ 'text': 'A shirtless man is singing into a microphone while a woman next to '
+         'him plays an accordion.He is playing a saxophone.'}
+
+{'dt_explanation_1': 'Two soccer players race each other during a match while '
+                     'the crowd excitedly cheers on.Two men compete to see who '
+                     'is faster during soccer.',
+ 'dt_explanation_2': 'A child doing a cannonball into a large swimming '
+                     'poolYoung boy jumps into a deep pool.',
+ 'dt_explanation_3': 'Looking through the window of an Asian barber shop while '
+                     'a few customers have their haircut.A man is watching '
+                     'people get their haircut',
+ 'dt_explanation_4': 'Street vendors show their necklaces for sale to three '
+                     'customers.Street vendors try to coax people into buying '
+                     'their jewelry.',
+ 'dt_explanation_5': 'Woman with red umbrella walking in a city.A lady in an '
+                     'urban setting is ready if it rains.',
+ 'dt_predictions': 0,
+ 'explanation_1': 'A desk can be in others places besides the office.',
+ 'explanation_2': 'From a woman working on papers at her desk it cannot be '
+                  'assumed as office',
+ 'explanation_3': 'All women are not young.  Although she is working on papers '
+                  'at her desk, it does not mean that she is busy or that '
+                  "she's in an office.",
+ 'knn_explanation_1': 'Man raising young boy into the clear blue sky.Father '
+                      'holds his son in the air',
+ 'knn_explanation_2': 'Two soccer players race each other during a match while '
+                      'the crowd excitedly cheers on.Two men compete to see '
+                      'who is faster during soccer.',
+ 'knn_explanation_3': 'A teenage boy holds a hammer with both hands.A young '
+                      'man is carefully working with a hand tool.',
+ 'knn_explanation_4': 'A child doing a cannonball into a large swimming '
+                      'poolYoung boy jumps into a deep pool.',
+ 'knn_explanation_5': 'People hanging by a fountain on a warm day.Several '
+                      'people are enjoying a day in the sunshine.',
+ 'knn_predictions': 1,
+ 'label': 1,
+ 'lmeans_explanation_1': 'A model poses for a photo shoot inside a luxurious '
+                         'setting.a woman poses',
+ 'lmeans_explanation_2': 'An elder workman speaking to a younger workman.The '
+                         'workers are indoors',
+ 'lmeans_explanation_3': 'A person hitting a ball in a game of Cricket.A '
+                         'person is scoring a goal in cricket.',
+ 'lmeans_explanation_4': 'A climber is sillhouetted against the sky and rocks '
+                         'as he hangs by a rope from another rock.a climber '
+                         'assesses his option while climbing K2',
+ 'lmeans_explanation_5': 'Boy skateboarding on residential street, falling '
+                         'farward with hands on the ground.A boy wearing a red '
+                         'shirt is falling off his skateboard.',
+ 'lmeans_predictions': 1,
+ 'svm_explanation_1': 'Man raising young boy into the clear blue sky.Father '
+                      'holds his son in the air',
+ 'svm_explanation_2': 'Two soccer players race each other during a match while '
+                      'the crowd excitedly cheers on.Two men compete to see '
+                      'who is faster during soccer.',
+ 'svm_explanation_3': 'A teenage boy holds a hammer with both hands.A young '
+                      'man is carefully working with a hand tool.',
+ 'svm_explanation_4': 'A child doing a cannonball into a large swimming '
+                      'poolYoung boy jumps into a deep pool.',
+ 'svm_explanation_5': 'People hanging by a fountain on a warm day.Several '
+                      'people are enjoying a day in the sunshine.',
+ 'svm_predictions': 0,
+ 'text': 'A woman in a gray shirt working on papers at her desk.Young lady '
+         'busy with her work in office'}

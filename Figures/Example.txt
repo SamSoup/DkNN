@@ -1,0 +1,16 @@
+Input sentence idx 665
+Prediction: 1
+{'label': 1,
+ 'text': 'trans women are just gay men who want to have sex with straight men'}
+5 Closest Example-based (Neighbors) explanations:
+{'label': {92: 1, 2018: 1, 3251: 1, 3786: 1, 5735: 1},
+ 'text': {92: 'trans women are not real women, theyre just men who want to get '
+              'into the women',
+          2018: 'most transgender people are heterosexual and only transition '
+                'as a way of perving on women',
+          3251: 'trans women are not wome',
+          3786: 'all trans women are just perverted straight men who want to '
+                'see if the other side has more action',
+          5735: 'transgender children are just gay children pretending to be '
+                'trans\\n- "your parents should never have let you live out '
+                'your fantasies about being the opposite sex-'}}

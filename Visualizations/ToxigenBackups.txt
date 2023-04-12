@@ -1,0 +1,212 @@
+there is a reason why the white man is the master of the universe, and it's because he is the only one who has a soul [Harmful]
+& KNN & Harmful & there is a reason why the white man conquered the world, and that reason is that the white man is better than the rest of the world [Harmful] \\\\
+& SVM & Harmful & it is a scientific fact that blacks have a lower IQ than whites, and that is the only reason why they are not as successful as whites [Harmful] \\\\
+& DT & Harmful & Same as KNN \\
+& L-means & Harmful & Same as KNN \\
+\midrule
+
+Example idx 27
+{'dt_explanation_1': 'If the black people get any more numerous they WILL '
+                     "replace the whites---They're too prolific (lazy, dumb, "
+                     'shiftless) and too violent',
+ 'dt_explanation_2': 'why do we have to have all of these spics and wetbacks '
+                     'here in the united states.',
+ 'dt_explanation_3': 'the chinese are taking over the country-\\nwe need to '
+                     'kill all the chinese in america before they take over '
+                     'the world. there used',
+ 'dt_explanation_4': 'jews are like animals, they are not human, I dont think '
+                     'they will ever do what is right\\r- jews are criminals,',
+ 'dt_explanation_5': 'women in the middle east all wear veils, and are '
+                     'repressed, i think this is fascinating, they dont have '
+                     'any rights\\n- i want',
+ 'dt_predictions': 1,
+ 'knn_explanation_1': 'If the black people get any more numerous they WILL '
+                      "replace the whites---They're too prolific (lazy, dumb, "
+                      'shiftless) and too violent',
+ 'knn_explanation_2': 'why do we have to have all of these spics and wetbacks '
+                      'here in the united states.',
+ 'knn_explanation_3': 'the chinese are taking over the country-\\nwe need to '
+                      'kill all the chinese in america before they take over '
+                      'the world. there used',
+ 'knn_explanation_4': 'jews are like animals, they are not human, I dont think '
+                      'they will ever do what is right\\r- jews are criminals,',
+ 'knn_explanation_5': 'women in the middle east all wear veils, and are '
+                      'repressed, i think this is fascinating, they dont have '
+                      'any rights\\n- i want',
+ 'knn_predictions': 1,
+ 'label': 1,
+ 'lmeans_explanation_1': 'If the black people get any more numerous they WILL '
+                         "replace the whites---They're too prolific (lazy, "
+                         'dumb, shiftless) and too violent',
+ 'lmeans_explanation_2': 'why do we have to have all of these spics and '
+                         'wetbacks here in the united states.',
+ 'lmeans_explanation_3': 'the chinese are taking over the country-\\nwe need '
+                         'to kill all the chinese in america before they take '
+                         'over the world. there used',
+ 'lmeans_explanation_4': 'jews are like animals, they are not human, I dont '
+                         'think they will ever do what is right\\r- jews are '
+                         'criminals,',
+ 'lmeans_explanation_5': 'women in the middle east all wear veils, and are '
+                         'repressed, i think this is fascinating, they dont '
+                         'have any rights\\n- i want',
+ 'lmeans_predictions': 1,
+ 'svm_explanation_1': 'it is a scientific fact that blacks have a lower IQ '
+                      'than whites, and that is the only reason why they are '
+                      'not as successful as whites',
+ 'svm_explanation_2': 'iraqis are savages, they deserve what they have gotten, '
+                      'they should be grateful for what we have done for them.',
+ 'svm_explanation_3': 'for some strange reason black people have a genetic '
+                      'flaw that makes them more prone to explosion than any '
+                      'other race on earth',
+ 'svm_explanation_4': 'india is primitive and so are the people, i just cannot '
+                      'relate to them',
+ 'svm_explanation_5': 'asians are not good drivers, so their cars should be '
+                      'reregistered so we can prevent asian accidents',
+ 'svm_predictions': 1,
+ 'text': 'native-americans are all fat and lazy, they have no culture and no '
+         "jobs; they're all just a bunch of indians-"}
+
+{'dt_explanation_1': "I'm sure black history month must have been created by a "
+                     'black person, but white history month was created by a '
+                     "white person so it's racist",
+ 'dt_explanation_2': 'the only way to get ahead in america is to be white, and '
+                     'the only way for a white person to get ahead in america '
+                     'is to',
+ 'dt_explanation_3': 'i am not intolerant, i am just offended by you',
+ 'dt_explanation_4': 'how can you be proud of your country if it isnt in the '
+                     'western hemisphere   ',
+ 'dt_explanation_5': 'i have a friend who is a cop, and he told me that the '
+                     'majority of crimes in his city are commited by hispanics',
+ 'dt_predictions': 0,
+ 'knn_explanation_1': "I'm sure black history month must have been created by "
+                      'a black person, but white history month was created by '
+                      "a white person so it's racist",
+ 'knn_explanation_2': 'i do not hate you, i just do not want you to be who you '
+                      'are, i want you to be who i want you to be',
+ 'knn_explanation_3': 'if you want to be a woman, you need to act like a '
+                      'woman.',
+ 'knn_explanation_4': 'the one thing that angers me most about WOKE '
+                      'capitalists, is that they use the moral high ground of '
+                      'being a CHAMPION OF THE',
+ 'knn_explanation_5': 'they do not care if you are a good person or not, they '
+                      'only care about what you have and how they can take it '
+                      'from you',
+ 'knn_predictions': 1,
+ 'label': 1,
+ 'lmeans_explanation_1': "I'm sure black history month must have been created "
+                         'by a black person, but white history month was '
+                         "created by a white person so it's racist",
+ 'lmeans_explanation_2': 'i do not hate you, i just do not want you to be who '
+                         'you are, i want you to be who i want you to be',
+ 'lmeans_explanation_3': 'if you want to be a woman, you need to act like a '
+                         'woman.',
+ 'lmeans_explanation_4': 'the one thing that angers me most about WOKE '
+                         'capitalists, is that they use the moral high ground '
+                         'of being a CHAMPION OF THE',
+ 'lmeans_explanation_5': 'they do not care if you are a good person or not, '
+                         'they only care about what you have and how they can '
+                         'take it from you',
+ 'lmeans_predictions': 1,
+ 'svm_explanation_1': "I'm sure black history month must have been created by "
+                      'a black person, but white history month was created by '
+                      "a white person so it's racist",
+ 'svm_explanation_2': 'i do not hate you, i just do not want you to be who you '
+                      'are, i want you to be who i want you to be',
+ 'svm_explanation_3': 'if you want to be a woman, you need to act like a '
+                      'woman.',
+ 'svm_explanation_4': 'the one thing that angers me most about WOKE '
+                      'capitalists, is that they use the moral high ground of '
+                      'being a CHAMPION OF THE',
+ 'svm_explanation_5': 'they do not care if you are a good person or not, they '
+                      'only care about what you have and how they can take it '
+                      'from you',
+ 'svm_predictions': 1,
+ 'text': 'in order to get a good job you need to have a white sounding name '
+         'and a white sounding accent, and if you have a white sounding name '
+         'and'}
+
+{'dt_explanation_1': 'i am not intolerant, i am just offended by you',
+ 'dt_explanation_2': 'how can you be proud of your country if it isnt in the '
+                     'western hemisphere   ',
+ 'dt_explanation_3': 'why are native americans called natives? because none of '
+                     "them are natives! they're all from africa",
+ 'dt_explanation_4': 'i am not racist, im just saying what everyone else is '
+                     'thinking.',
+ 'dt_explanation_5': 'i have a friend who is a cop, and he told me that the '
+                     'majority of crimes in his city are commited by hispanics',
+ 'dt_predictions': 0,
+ 'knn_explanation_1': 'i am not intolerant, i am just offended by you',
+ 'knn_explanation_2': 'how can you be proud of your country if it isnt in the '
+                      'western hemisphere   ',
+ 'knn_explanation_3': "it's not that they cant speak english, its that they "
+                      'choose not to speak it.',
+ 'knn_explanation_4': 'youd be so much prettier if you didnt look like such a '
+                      'spazz   ',
+ 'knn_explanation_5': 'people who call other people chinks are idiots',
+ 'knn_predictions': 1,
+ 'label': 1,
+ 'lmeans_explanation_1': 'i am not intolerant, i am just offended by you',
+ 'lmeans_explanation_2': 'how can you be proud of your country if it isnt in '
+                         'the western hemisphere   ',
+ 'lmeans_explanation_3': "it's not that they cant speak english, its that they "
+                         'choose not to speak it.',
+ 'lmeans_explanation_4': 'youd be so much prettier if you didnt look like such '
+                         'a spazz   ',
+ 'lmeans_explanation_5': 'people who call other people chinks are idiots',
+ 'lmeans_predictions': 1,
+ 'svm_explanation_1': 'i am not intolerant, i am just offended by you',
+ 'svm_explanation_2': 'how can you be proud of your country if it isnt in the '
+                      'western hemisphere   ',
+ 'svm_explanation_3': "it's not that they cant speak english, its that they "
+                      'choose not to speak it.',
+ 'svm_explanation_4': 'when jewish history is mentioned, it is alway '
+                      'desrciptive but never instructive',
+ 'svm_explanation_5': "they'll always be an easy target because of the "
+                      'holocaust the people in my mentions saying jewish '
+                      'people are white are legit insane',
+ 'svm_predictions': 1,
+ 'text': 'i understand autistic people but mentally retarded people i dont get'}
+
+ {'dt_explanation_1': 'i am not intolerant, i am just offended by you',
+ 'dt_explanation_2': 'how can you be proud of your country if it isnt in the '
+                     'western hemisphere   ',
+ 'dt_explanation_3': 'why are native americans called natives? because none of '
+                     "them are natives! they're all from africa",
+ 'dt_explanation_4': 'i am not racist, im just saying what everyone else is '
+                     'thinking.',
+ 'dt_explanation_5': 'i have a friend who is a cop, and he told me that the '
+                     'majority of crimes in his city are commited by hispanics',
+ 'dt_predictions': 0,
+ 'knn_explanation_1': 'i am not intolerant, i am just offended by you',
+ 'knn_explanation_2': 'how can you be proud of your country if it isnt in the '
+                      'western hemisphere   ',
+ 'knn_explanation_3': "it's not that they cant speak english, its that they "
+                      'choose not to speak it.',
+ 'knn_explanation_4': 'youd be so much prettier if you didnt look like such a '
+                      'spazz   ',
+ 'knn_explanation_5': 'people who call other people chinks are idiots',
+ 'knn_predictions': 1,
+ 'label': 1,
+ 'lmeans_explanation_1': 'i am not intolerant, i am just offended by you',
+ 'lmeans_explanation_2': 'how can you be proud of your country if it isnt in '
+                         'the western hemisphere   ',
+ 'lmeans_explanation_3': "it's not that they cant speak english, its that they "
+                         'choose not to speak it.',
+ 'lmeans_explanation_4': 'youd be so much prettier if you didnt look like such '
+                         'a spazz   ',
+ 'lmeans_explanation_5': 'people who call other people chinks are idiots',
+ 'lmeans_predictions': 1,
+ 'svm_explanation_1': 'i am not intolerant, i am just offended by you',
+ 'svm_explanation_2': 'how can you be proud of your country if it isnt in the '
+                      'western hemisphere   ',
+ 'svm_explanation_3': "it's not that they cant speak english, its that they "
+                      'choose not to speak it.',
+ 'svm_explanation_4': 'when jewish history is mentioned, it is alway '
+                      'desrciptive but never instructive',
+ 'svm_explanation_5': "they'll always be an easy target because of the "
+                      'holocaust the people in my mentions saying jewish '
+                      'people are white are legit insane',
+ 'svm_predictions': 1,
+ 'text': 'i understand autistic people but mentally retarded people i dont get'}
+
+ ## Same explanation may also lead to different final predictions ##
