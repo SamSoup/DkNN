@@ -358,7 +358,7 @@ def main():
         # get per-class f1 too, if we want f1
         if "f1" in metric_descs:
             f1_scores = load_metric("f1").compute(predictions=preds, references=p.label_ids, average=None)["f1"]
-            for i, l in enumerate(label_list):
+            for i, l in enumerate(data_args.int_to_text):
                 computed_scores[f"f1-{l}"] = f1_scores[i]
         return computed_scores
 
@@ -658,7 +658,7 @@ def main():
                     prediction_ids = np.array(list(map(lambda x: generative_label_to_id[x], predictions)))
                     output_prediction_file = os.path.join(training_args.output_dir, "predict_results.txt")
                     with open(output_prediction_file, "w", encoding="utf-8") as writer:
-                        logger.info(f"***** Writing Predict results *****")
+                        logger.info(f"***** Writing Predict results to {output_prediction_file} *****")
                         writer.write("index\tprediction\n")
                         for index, item in enumerate(prediction_ids):
                             item = label_list[item]
