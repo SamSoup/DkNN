@@ -1,4 +1,6 @@
+from typing import List, Tuple
 import numpy as np
+import re
 
 def flip_bits(arr: np.ndarray) -> np.ndarray:
     """
@@ -23,3 +25,22 @@ def randargmax(logits: np.ndarray) -> np.ndarray:
 
 def l2norm(x: np.ndarray, y: np.ndarray):
     return np.linalg.norm(x-y)
+
+def flip_bits(arr: np.ndarray) -> np.ndarray:
+    """
+    Given an numpy array of all either 0 or 1s, flip 0 to 1 and 1 to 0.
+    """
+    return (~arr.astype(bool)).astype(int)
+
+def l2norm(x: np.ndarray, y: np.ndarray):
+    return np.linalg.norm(x-y)
+
+def convert_boolean_array_to_str(arr: np.ndarray) -> Tuple[str, List[str]]:
+    string_rep = re.sub("[\[\] ]", "", np.array2string(arr.astype(int), 
+                                                       separator="", 
+                                                       max_line_width=np.inf, 
+                                                       threshold=np.inf))
+    if len(arr.shape) > 1:
+        # more than one dimensional, then split by line
+        string_rep = string_rep.split("\n")
+    return string_rep
