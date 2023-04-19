@@ -669,7 +669,7 @@ def main():
                         predict_metrics = compute_metrics_generative(p)
                         # To be JSON-serializable, we need to remove numpy types or zero-d tensors
                         predict_metrics = denumpify_detensorize(predict_metrics)
-                        predict_metrics.update(prediction_output.metrics)
+                        predict_metrics.update(predict_results.metrics)
                         predict_metrics['predict_samples'] = len(test_data)
                         # Prefix all keys with metric_key_prefix + '_'
                         for key in list(predict_metrics.keys()):
