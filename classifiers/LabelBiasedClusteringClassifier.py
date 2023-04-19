@@ -22,7 +22,7 @@ from sklearn.utils.multiclass import unique_labels
 from sklearn.metrics.pairwise import euclidean_distances
 from collections import Counter
 from utils_copy import find_majority
-from np_utils import randargmax
+from utils import randargmax
 
 class LabelBiasedClusteringClassifier(BaseEstimator, ClassifierMixin):
     class Node:

@@ -1,12 +1,9 @@
 from typing import List, Dict
 from collections import Counter
+from random import randint
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score
 from scipy import stats
 import numpy as np
-import pandas as pd
-import random
-import math
-import os
 
 def compute_metrics(y_true, y_pred, prefix: str, is_multiclass: bool=False):
     if is_multiclass:
@@ -40,3 +37,15 @@ def compute_metrics(y_true, y_pred, prefix: str, is_multiclass: bool=False):
         f'{prefix}_recall': recall_score(y_true, y_pred)
     }
 
+def find_majority(votes):
+    vote_count = Counter(votes)
+    tops = vote_count.most_common(1)
+    if len(tops) > 1:
+        # break ties randomly
+        idx = randint(0, len(tops)-1)
+        return tops[idx][0]
+    return tops[0][0]
+
+def find_majority_batched(y_preds: np.ndarray):
+    """(n_samples, n_predictors)"""
+    return stats.mode(y_preds.transpose())[0].squeeze()

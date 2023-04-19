@@ -6,7 +6,6 @@
 	"evaluation_metrics": ["accuracy", "f1", "precision", "recall"],
 	"seed": 42,
 	"output_dir": "./output/toxigen/flan-t5-large/eval_and_test",
-	"metric_for_best_model": "f1-hate",
 	"do_train_val_test_split": false,
 	"overwrite_output_dir": true,
 	"do_train": false,
