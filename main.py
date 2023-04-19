@@ -296,7 +296,7 @@ def main():
                     l.masked_fill_(
                         l == tokenizer.pad_token_id, -100
                     )
-                    temp.append(l.tolist())
+                    temp.append(l.type(torch.LongTensor).tolist())
                 result["label"] = temp
             elif label_to_id is not None:
                 result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
