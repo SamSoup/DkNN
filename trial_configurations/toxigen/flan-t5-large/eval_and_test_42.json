@@ -10,7 +10,7 @@
 	"do_train_val_test_split": false,
 	"overwrite_output_dir": true,
 	"do_train": false,
-	"do_eval": true,
+	"do_eval": false,
 	"do_predict": true,
 	"compute_predict_results": true,
 	"pad_to_max_length": false,

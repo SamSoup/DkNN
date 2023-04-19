@@ -654,7 +654,8 @@ def main():
                     predictions = tokenizer.batch_decode(
                         predict_results.predictions, skip_special_tokens=True, clean_up_tokenization_spaces=True
                     )
-                    predictions = postprocess_text(predictions)
+                    print(predictions)
+                    predictions = [pred.strip() for pred in predictions]
                     prediction_ids = np.array(list(map(lambda x: generative_label_to_id[x], predictions)))
                     output_prediction_file = os.path.join(training_args.output_dir, "predict_results.txt")
                     with open(output_prediction_file, "w", encoding="utf-8") as writer:
