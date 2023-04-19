@@ -291,6 +291,7 @@ def main():
                                             max_length=max_seq_length,
                                             truncation=True).input_ids
                 print(result['label'])
+                print(tokenizer.pad_token_id)
                 result["label"] = [
                     l.masked_fill(
                         l == tokenizer.pad_token_id, -100
