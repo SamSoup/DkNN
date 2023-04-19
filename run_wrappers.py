@@ -32,7 +32,7 @@ from sklearn.model_selection import GridSearchCV
 from ModelForSentenceLevelRepresentation import (
     ModelForSentenceLevelRepresentation, get_model_for_representation
 )
-from trial_configurations.configuration_constants import (
+from constants import (
     DATASETS,
     DATA_PATH,
     LABELS,

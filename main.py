@@ -626,28 +626,47 @@ def main():
     if training_args.do_predict:
         logger.info("*** Predict ***")
         if 't5' in model_args.model_name_or_path or 'xlnet' in model_args.model_name_or_path:
-            metrics = trainer.evaluate(eval_dataset=test_data, 
-                                       metric_key_prefix="predict")
-            max_test_samples = (
-                data_args.max_test_samples if data_args.max_test_samples is not None else len(eval_data)
-            )
-            metrics["predict_samples"] = min(max_test_samples, len(test_data))
-            trainer.log_metrics("predict", metrics)
-            trainer.save_metrics("predict", metrics)
-            # predict_results = trainer.predict(
-            #     test_data, metric_key_prefix="predict", 
-            #     max_length=training_args.generation_max_length,
-            #     num_beams=training_args.generation_num_beams
+            # metrics = trainer.evaluate(eval_dataset=test_data, 
+            #                            metric_key_prefix="predict")
+            # max_test_samples = (
+            #     data_args.max_test_samples if data_args.max_test_samples is not None else len(eval_data)
             # )
-            # if trainer.is_world_process_zero():
-            #     if training_args.predict_with_generate:
-            #         predictions = tokenizer.batch_decode(
-            #             predict_results.predictions, skip_special_tokens=True, clean_up_tokenization_spaces=True
-            #         )
-            #         predictions = [pred.strip() for pred in predictions]
-            #         output_prediction_file = os.path.join(training_args.output_dir, "generated_predictions.txt")
-            #         with open(output_prediction_file, "w", encoding="utf-8") as writer:
-            #             writer.write("\n".join(predictions))
+            # metrics["predict_samples"] = min(max_test_samples, len(test_data))
+            # trainer.log_metrics("predict", metrics)
+            # trainer.save_metrics("predict", metrics)
+            if data_args.compute_predict_results:
+                test_labels = test_data["label"]
+            test_data = test_data.remove_columns("label")
+
+            predict_results = trainer.predict(
+                test_data, metric_key_prefix="predict", 
+                max_length=training_args.generation_max_length,
+                num_beams=training_args.generation_num_beams
+            )
+            if trainer.is_world_process_zero():
+                if training_args.predict_with_generate:
+                    predictions = tokenizer.batch_decode(
+                        predict_results.predictions, skip_special_tokens=True, clean_up_tokenization_spaces=True
+                    )
+                    predictions = postprocess_text(predictions)
+                    prediction_ids = np.array(list(map(lambda x: generative_label_to_id[x], predictions)))
+                    output_prediction_file = os.path.join(training_args.output_dir, "predict_results.txt")
+                    with open(output_prediction_file, "w", encoding="utf-8") as writer:
+                        writer.write("\n".join(prediction_ids))
+
+                    if data_args.compute_predict_results:
+                        p = EvalPrediction(predictions=prediction_ids, label_ids=test_labels)
+                        predict_metrics = compute_metrics(p)
+                        # To be JSON-serializable, we need to remove numpy types or zero-d tensors
+                        predict_metrics = denumpify_detensorize(predict_metrics)
+                        predict_metrics.update(prediction_output.metrics)
+                        predict_metrics['predict_samples'] = len(test_data)
+                        # Prefix all keys with metric_key_prefix + '_'
+                        for key in list(predict_metrics.keys()):
+                            if not key.startswith("predict_"):
+                                predict_metrics[f"predict_{key}"] = predict_metrics.pop(key)
+                        trainer.log_metrics("predict", predict_metrics)
+                        trainer.save_metrics("predict", predict_metrics)
         else:
             # Removing the `label` columns because it contains -1 and Trainer won't like that.
             if data_args.compute_predict_results:

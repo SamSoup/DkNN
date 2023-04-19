@@ -61,9 +61,11 @@ python -m pip install bert_score
 python -m pip install git+https://github.com/google-research/bleurt.git
 python -m pip install sentence-transformers
 python -m pip install multipledispatch
-python -m pip install nltk gensim sacrebleu
+python -m pip install nltk gensim sacrebleu skops
 conda update --all
 conda install -c conda-forge umap-learn
+export PYTHONPATH="/path/to/other/projects/directory:$PYTHONPATH" or 
+conda develop <work directory>
 ```
 
 On TACC: add these flags to pip install

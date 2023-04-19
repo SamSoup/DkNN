@@ -13,7 +13,6 @@ output/
 layer_*/
 data/
 OLD/
-trial_configurations/
 .cache
 .vscode
 
