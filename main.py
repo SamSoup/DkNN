@@ -661,7 +661,6 @@ def main():
                         logger.info(f"***** Writing Predict results to {output_prediction_file} *****")
                         writer.write("index\tprediction\n")
                         for index, item in enumerate(prediction_ids):
-                            item = label_list[item]
                             writer.write(f"{index}\t{item}\n")
 
                     if data_args.compute_predict_results:
