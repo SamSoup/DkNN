@@ -290,11 +290,14 @@ def main():
                                             padding=True, 
                                             max_length=max_seq_length,
                                             truncation=True).input_ids
-                result["label"] = [
-                    torch.Tensor(l).masked_fill_(
-                        torch.Tensor(l) == tokenizer.pad_token_id, -100
-                    ).to_list() for l in result["label"] 
-                ]
+                temp = []
+                for l in result["label"]:
+                    l = torch.Tensor(l)
+                    l.masked_fill_(
+                        l == tokenizer.pad_token_id, -100
+                    ).to_list()
+                    temp.append(l)
+                result["label"] = temp
             elif label_to_id is not None:
                 result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
         return result
