@@ -20,8 +20,8 @@
 	"report_to": "none",
 	"int_to_text": ["entailment", "neutral", "contradiction"],
 	"eval_accumulation_steps": 100,
-	"per_device_train_batch_size": 32,
-	"per_device_eval_batch_size": 32,
+	"per_device_train_batch_size": 16,
+	"per_device_eval_batch_size": 16,
 	"do_DKNN": false,
 	"save_logits": false
 }
