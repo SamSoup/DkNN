@@ -1,11 +1,11 @@
 {
-	"model_name_or_path": "./output/toxigen/deberta-v3-large-seed-42",
+	"model_name_or_path": "./output/toxigen/deberta-large-seed-42",
     "train_file": "./data/toxigen/train_data.csv",
 	"validation_file": "./data/toxigen/eval_data.csv",
 	"test_file": "./data/toxigen/test_data.csv",
 	"evaluation_metrics": ["accuracy", "f1", "precision", "recall"],
 	"seed": 42,
-	"output_dir": "./output/toxigen/deberta-v3-large-seed-42/eval_and_test",
+	"output_dir": "./output/toxigen/deberta-large-seed-42/eval_and_test",
     "metric_for_best_model": "f1",
 	"do_train_val_test_split": false,
 	"overwrite_output_dir": true,

@@ -1,11 +1,11 @@
 {
-	"model_name_or_path": "./output/esnli/deberta-large-1/checkpoint-600",
+	"model_name_or_path": "./output/esnli/deberta-large-seed-42",
 	"train_file": "./data/esnli/train_data.csv",
 	"validation_file": "./data/esnli/eval_data.csv",
 	"test_file": "./data/esnli/test_data.csv",
 	"evaluation_metrics": ["accuracy", "f1", "precision", "recall"],
 	"seed": 42,
-	"output_dir": "./output/esnli/deberta-large-1/eval",
+	"output_dir": "./output/esnli/deberta-large-seed-42/eval_and_test",
 	"metric_for_best_model": "accuracy",
 	"do_train_val_test_split": false,
 	"overwrite_output_dir": true,
