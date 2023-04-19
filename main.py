@@ -654,11 +654,9 @@ def main():
                     predictions = tokenizer.batch_decode(
                         predict_results.predictions, skip_special_tokens=True, clean_up_tokenization_spaces=True
                     )
-                    print(predictions)
                     predictions = [pred.strip() for pred in predictions]
                     prediction_ids = np.array(list(map(lambda x: generative_label_to_id[x], predictions)))
                     output_prediction_file = os.path.join(training_args.output_dir, "predict_results.txt")
-                    print(prediction_ids)
                     with open(output_prediction_file, "w", encoding="utf-8") as writer:
                         logger.info(f"***** Writing Predict results *****")
                         writer.write("index\tprediction\n")
@@ -667,9 +665,8 @@ def main():
                             writer.write(f"{index}\t{item}\n")
 
                     if data_args.compute_predict_results:
-                        print(np.array(test_labels))
-                        p = EvalPrediction(predictions=prediction_ids, label_ids=np.array(test_labels))
-                        predict_metrics = compute_metrics(p)
+                        p = EvalPrediction(predictions=predict_results.predictions, label_ids=test_labels)
+                        predict_metrics = compute_metrics_generative(p)
                         # To be JSON-serializable, we need to remove numpy types or zero-d tensors
                         predict_metrics = denumpify_detensorize(predict_metrics)
                         predict_metrics.update(prediction_output.metrics)
