@@ -291,8 +291,8 @@ def main():
                                             max_length=max_seq_length,
                                             truncation=True).input_ids
                 result["label"] = [
-                    torch.tensor(l).masked_fill_(
-                        torch.tensor(l) == tokenizer.pad_token_id, -100
+                    torch.Tensor(l).masked_fill_(
+                        torch.Tensor(l) == tokenizer.pad_token_id, -100
                     ).to_list() for l in result["label"] 
                 ]
             elif label_to_id is not None:
