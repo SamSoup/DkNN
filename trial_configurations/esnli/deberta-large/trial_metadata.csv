@@ -1,0 +1,337 @@
+prediction_method,layers_to_save_desc,poolers_to_use_desc,K,dist_to_weight_fct
+nonconformal,All,mean_with_attention,1,uniform
+nonconformal,All,mean_with_attention,1,inverse
+nonconformal,All,mean_with_attention,1,inverse_squared
+nonconformal,All,mean_with_attention,3,uniform
+nonconformal,All,mean_with_attention,3,inverse
+nonconformal,All,mean_with_attention,3,inverse_squared
+nonconformal,All,mean_with_attention,5,uniform
+nonconformal,All,mean_with_attention,5,inverse
+nonconformal,All,mean_with_attention,5,inverse_squared
+nonconformal,All,mean_with_attention,7,uniform
+nonconformal,All,mean_with_attention,7,inverse
+nonconformal,All,mean_with_attention,7,inverse_squared
+nonconformal,All,mean_with_attention,9,uniform
+nonconformal,All,mean_with_attention,9,inverse
+nonconformal,All,mean_with_attention,9,inverse_squared
+nonconformal,All,mean_with_attention,99,uniform
+nonconformal,All,mean_with_attention,99,inverse
+nonconformal,All,mean_with_attention,99,inverse_squared
+nonconformal,All,mean_with_attention,999,uniform
+nonconformal,All,mean_with_attention,999,inverse
+nonconformal,All,mean_with_attention,999,inverse_squared
+nonconformal,All,mean_with_attention_and_cls,1,uniform
+nonconformal,All,mean_with_attention_and_cls,1,inverse
+nonconformal,All,mean_with_attention_and_cls,1,inverse_squared
+nonconformal,All,mean_with_attention_and_cls,3,uniform
+nonconformal,All,mean_with_attention_and_cls,3,inverse
+nonconformal,All,mean_with_attention_and_cls,3,inverse_squared
+nonconformal,All,mean_with_attention_and_cls,5,uniform
+nonconformal,All,mean_with_attention_and_cls,5,inverse
+nonconformal,All,mean_with_attention_and_cls,5,inverse_squared
+nonconformal,All,mean_with_attention_and_cls,7,uniform
+nonconformal,All,mean_with_attention_and_cls,7,inverse
+nonconformal,All,mean_with_attention_and_cls,7,inverse_squared
+nonconformal,All,mean_with_attention_and_cls,9,uniform
+nonconformal,All,mean_with_attention_and_cls,9,inverse
+nonconformal,All,mean_with_attention_and_cls,9,inverse_squared
+nonconformal,All,mean_with_attention_and_cls,99,uniform
+nonconformal,All,mean_with_attention_and_cls,99,inverse
+nonconformal,All,mean_with_attention_and_cls,99,inverse_squared
+nonconformal,All,mean_with_attention_and_cls,999,uniform
+nonconformal,All,mean_with_attention_and_cls,999,inverse
+nonconformal,All,mean_with_attention_and_cls,999,inverse_squared
+nonconformal,Embedding Only,mean_with_attention,1,uniform
+nonconformal,Embedding Only,mean_with_attention,1,inverse
+nonconformal,Embedding Only,mean_with_attention,1,inverse_squared
+nonconformal,Embedding Only,mean_with_attention,3,uniform
+nonconformal,Embedding Only,mean_with_attention,3,inverse
+nonconformal,Embedding Only,mean_with_attention,3,inverse_squared
+nonconformal,Embedding Only,mean_with_attention,5,uniform
+nonconformal,Embedding Only,mean_with_attention,5,inverse
+nonconformal,Embedding Only,mean_with_attention,5,inverse_squared
+nonconformal,Embedding Only,mean_with_attention,7,uniform
+nonconformal,Embedding Only,mean_with_attention,7,inverse
+nonconformal,Embedding Only,mean_with_attention,7,inverse_squared
+nonconformal,Embedding Only,mean_with_attention,9,uniform
+nonconformal,Embedding Only,mean_with_attention,9,inverse
+nonconformal,Embedding Only,mean_with_attention,9,inverse_squared
+nonconformal,Embedding Only,mean_with_attention,99,uniform
+nonconformal,Embedding Only,mean_with_attention,99,inverse
+nonconformal,Embedding Only,mean_with_attention,99,inverse_squared
+nonconformal,Embedding Only,mean_with_attention,999,uniform
+nonconformal,Embedding Only,mean_with_attention,999,inverse
+nonconformal,Embedding Only,mean_with_attention,999,inverse_squared
+nonconformal,Embedding Only,mean_with_attention_and_cls,1,uniform
+nonconformal,Embedding Only,mean_with_attention_and_cls,1,inverse
+nonconformal,Embedding Only,mean_with_attention_and_cls,1,inverse_squared
+nonconformal,Embedding Only,mean_with_attention_and_cls,3,uniform
+nonconformal,Embedding Only,mean_with_attention_and_cls,3,inverse
+nonconformal,Embedding Only,mean_with_attention_and_cls,3,inverse_squared
+nonconformal,Embedding Only,mean_with_attention_and_cls,5,uniform
+nonconformal,Embedding Only,mean_with_attention_and_cls,5,inverse
+nonconformal,Embedding Only,mean_with_attention_and_cls,5,inverse_squared
+nonconformal,Embedding Only,mean_with_attention_and_cls,7,uniform
+nonconformal,Embedding Only,mean_with_attention_and_cls,7,inverse
+nonconformal,Embedding Only,mean_with_attention_and_cls,7,inverse_squared
+nonconformal,Embedding Only,mean_with_attention_and_cls,9,uniform
+nonconformal,Embedding Only,mean_with_attention_and_cls,9,inverse
+nonconformal,Embedding Only,mean_with_attention_and_cls,9,inverse_squared
+nonconformal,Embedding Only,mean_with_attention_and_cls,99,uniform
+nonconformal,Embedding Only,mean_with_attention_and_cls,99,inverse
+nonconformal,Embedding Only,mean_with_attention_and_cls,99,inverse_squared
+nonconformal,Embedding Only,mean_with_attention_and_cls,999,uniform
+nonconformal,Embedding Only,mean_with_attention_and_cls,999,inverse
+nonconformal,Embedding Only,mean_with_attention_and_cls,999,inverse_squared
+nonconformal,Embedding + Last,mean_with_attention,1,uniform
+nonconformal,Embedding + Last,mean_with_attention,1,inverse
+nonconformal,Embedding + Last,mean_with_attention,1,inverse_squared
+nonconformal,Embedding + Last,mean_with_attention,3,uniform
+nonconformal,Embedding + Last,mean_with_attention,3,inverse
+nonconformal,Embedding + Last,mean_with_attention,3,inverse_squared
+nonconformal,Embedding + Last,mean_with_attention,5,uniform
+nonconformal,Embedding + Last,mean_with_attention,5,inverse
+nonconformal,Embedding + Last,mean_with_attention,5,inverse_squared
+nonconformal,Embedding + Last,mean_with_attention,7,uniform
+nonconformal,Embedding + Last,mean_with_attention,7,inverse
+nonconformal,Embedding + Last,mean_with_attention,7,inverse_squared
+nonconformal,Embedding + Last,mean_with_attention,9,uniform
+nonconformal,Embedding + Last,mean_with_attention,9,inverse
+nonconformal,Embedding + Last,mean_with_attention,9,inverse_squared
+nonconformal,Embedding + Last,mean_with_attention,99,uniform
+nonconformal,Embedding + Last,mean_with_attention,99,inverse
+nonconformal,Embedding + Last,mean_with_attention,99,inverse_squared
+nonconformal,Embedding + Last,mean_with_attention,999,uniform
+nonconformal,Embedding + Last,mean_with_attention,999,inverse
+nonconformal,Embedding + Last,mean_with_attention,999,inverse_squared
+nonconformal,Embedding + Last,mean_with_attention_and_cls,1,uniform
+nonconformal,Embedding + Last,mean_with_attention_and_cls,1,inverse
+nonconformal,Embedding + Last,mean_with_attention_and_cls,1,inverse_squared
+nonconformal,Embedding + Last,mean_with_attention_and_cls,3,uniform
+nonconformal,Embedding + Last,mean_with_attention_and_cls,3,inverse
+nonconformal,Embedding + Last,mean_with_attention_and_cls,3,inverse_squared
+nonconformal,Embedding + Last,mean_with_attention_and_cls,5,uniform
+nonconformal,Embedding + Last,mean_with_attention_and_cls,5,inverse
+nonconformal,Embedding + Last,mean_with_attention_and_cls,5,inverse_squared
+nonconformal,Embedding + Last,mean_with_attention_and_cls,7,uniform
+nonconformal,Embedding + Last,mean_with_attention_and_cls,7,inverse
+nonconformal,Embedding + Last,mean_with_attention_and_cls,7,inverse_squared
+nonconformal,Embedding + Last,mean_with_attention_and_cls,9,uniform
+nonconformal,Embedding + Last,mean_with_attention_and_cls,9,inverse
+nonconformal,Embedding + Last,mean_with_attention_and_cls,9,inverse_squared
+nonconformal,Embedding + Last,mean_with_attention_and_cls,99,uniform
+nonconformal,Embedding + Last,mean_with_attention_and_cls,99,inverse
+nonconformal,Embedding + Last,mean_with_attention_and_cls,99,inverse_squared
+nonconformal,Embedding + Last,mean_with_attention_and_cls,999,uniform
+nonconformal,Embedding + Last,mean_with_attention_and_cls,999,inverse
+nonconformal,Embedding + Last,mean_with_attention_and_cls,999,inverse_squared
+nonconformal,Last Only,mean_with_attention,1,uniform
+nonconformal,Last Only,mean_with_attention,1,inverse
+nonconformal,Last Only,mean_with_attention,1,inverse_squared
+nonconformal,Last Only,mean_with_attention,3,uniform
+nonconformal,Last Only,mean_with_attention,3,inverse
+nonconformal,Last Only,mean_with_attention,3,inverse_squared
+nonconformal,Last Only,mean_with_attention,5,uniform
+nonconformal,Last Only,mean_with_attention,5,inverse
+nonconformal,Last Only,mean_with_attention,5,inverse_squared
+nonconformal,Last Only,mean_with_attention,7,uniform
+nonconformal,Last Only,mean_with_attention,7,inverse
+nonconformal,Last Only,mean_with_attention,7,inverse_squared
+nonconformal,Last Only,mean_with_attention,9,uniform
+nonconformal,Last Only,mean_with_attention,9,inverse
+nonconformal,Last Only,mean_with_attention,9,inverse_squared
+nonconformal,Last Only,mean_with_attention,99,uniform
+nonconformal,Last Only,mean_with_attention,99,inverse
+nonconformal,Last Only,mean_with_attention,99,inverse_squared
+nonconformal,Last Only,mean_with_attention,999,uniform
+nonconformal,Last Only,mean_with_attention,999,inverse
+nonconformal,Last Only,mean_with_attention,999,inverse_squared
+nonconformal,Last Only,mean_with_attention_and_cls,1,uniform
+nonconformal,Last Only,mean_with_attention_and_cls,1,inverse
+nonconformal,Last Only,mean_with_attention_and_cls,1,inverse_squared
+nonconformal,Last Only,mean_with_attention_and_cls,3,uniform
+nonconformal,Last Only,mean_with_attention_and_cls,3,inverse
+nonconformal,Last Only,mean_with_attention_and_cls,3,inverse_squared
+nonconformal,Last Only,mean_with_attention_and_cls,5,uniform
+nonconformal,Last Only,mean_with_attention_and_cls,5,inverse
+nonconformal,Last Only,mean_with_attention_and_cls,5,inverse_squared
+nonconformal,Last Only,mean_with_attention_and_cls,7,uniform
+nonconformal,Last Only,mean_with_attention_and_cls,7,inverse
+nonconformal,Last Only,mean_with_attention_and_cls,7,inverse_squared
+nonconformal,Last Only,mean_with_attention_and_cls,9,uniform
+nonconformal,Last Only,mean_with_attention_and_cls,9,inverse
+nonconformal,Last Only,mean_with_attention_and_cls,9,inverse_squared
+nonconformal,Last Only,mean_with_attention_and_cls,99,uniform
+nonconformal,Last Only,mean_with_attention_and_cls,99,inverse
+nonconformal,Last Only,mean_with_attention_and_cls,99,inverse_squared
+nonconformal,Last Only,mean_with_attention_and_cls,999,uniform
+nonconformal,Last Only,mean_with_attention_and_cls,999,inverse
+nonconformal,Last Only,mean_with_attention_and_cls,999,inverse_squared
+conformal,All,mean_with_attention,1,uniform
+conformal,All,mean_with_attention,1,inverse
+conformal,All,mean_with_attention,1,inverse_squared
+conformal,All,mean_with_attention,3,uniform
+conformal,All,mean_with_attention,3,inverse
+conformal,All,mean_with_attention,3,inverse_squared
+conformal,All,mean_with_attention,5,uniform
+conformal,All,mean_with_attention,5,inverse
+conformal,All,mean_with_attention,5,inverse_squared
+conformal,All,mean_with_attention,7,uniform
+conformal,All,mean_with_attention,7,inverse
+conformal,All,mean_with_attention,7,inverse_squared
+conformal,All,mean_with_attention,9,uniform
+conformal,All,mean_with_attention,9,inverse
+conformal,All,mean_with_attention,9,inverse_squared
+conformal,All,mean_with_attention,99,uniform
+conformal,All,mean_with_attention,99,inverse
+conformal,All,mean_with_attention,99,inverse_squared
+conformal,All,mean_with_attention,999,uniform
+conformal,All,mean_with_attention,999,inverse
+conformal,All,mean_with_attention,999,inverse_squared
+conformal,All,mean_with_attention_and_cls,1,uniform
+conformal,All,mean_with_attention_and_cls,1,inverse
+conformal,All,mean_with_attention_and_cls,1,inverse_squared
+conformal,All,mean_with_attention_and_cls,3,uniform
+conformal,All,mean_with_attention_and_cls,3,inverse
+conformal,All,mean_with_attention_and_cls,3,inverse_squared
+conformal,All,mean_with_attention_and_cls,5,uniform
+conformal,All,mean_with_attention_and_cls,5,inverse
+conformal,All,mean_with_attention_and_cls,5,inverse_squared
+conformal,All,mean_with_attention_and_cls,7,uniform
+conformal,All,mean_with_attention_and_cls,7,inverse
+conformal,All,mean_with_attention_and_cls,7,inverse_squared
+conformal,All,mean_with_attention_and_cls,9,uniform
+conformal,All,mean_with_attention_and_cls,9,inverse
+conformal,All,mean_with_attention_and_cls,9,inverse_squared
+conformal,All,mean_with_attention_and_cls,99,uniform
+conformal,All,mean_with_attention_and_cls,99,inverse
+conformal,All,mean_with_attention_and_cls,99,inverse_squared
+conformal,All,mean_with_attention_and_cls,999,uniform
+conformal,All,mean_with_attention_and_cls,999,inverse
+conformal,All,mean_with_attention_and_cls,999,inverse_squared
+conformal,Embedding Only,mean_with_attention,1,uniform
+conformal,Embedding Only,mean_with_attention,1,inverse
+conformal,Embedding Only,mean_with_attention,1,inverse_squared
+conformal,Embedding Only,mean_with_attention,3,uniform
+conformal,Embedding Only,mean_with_attention,3,inverse
+conformal,Embedding Only,mean_with_attention,3,inverse_squared
+conformal,Embedding Only,mean_with_attention,5,uniform
+conformal,Embedding Only,mean_with_attention,5,inverse
+conformal,Embedding Only,mean_with_attention,5,inverse_squared
+conformal,Embedding Only,mean_with_attention,7,uniform
+conformal,Embedding Only,mean_with_attention,7,inverse
+conformal,Embedding Only,mean_with_attention,7,inverse_squared
+conformal,Embedding Only,mean_with_attention,9,uniform
+conformal,Embedding Only,mean_with_attention,9,inverse
+conformal,Embedding Only,mean_with_attention,9,inverse_squared
+conformal,Embedding Only,mean_with_attention,99,uniform
+conformal,Embedding Only,mean_with_attention,99,inverse
+conformal,Embedding Only,mean_with_attention,99,inverse_squared
+conformal,Embedding Only,mean_with_attention,999,uniform
+conformal,Embedding Only,mean_with_attention,999,inverse
+conformal,Embedding Only,mean_with_attention,999,inverse_squared
+conformal,Embedding Only,mean_with_attention_and_cls,1,uniform
+conformal,Embedding Only,mean_with_attention_and_cls,1,inverse
+conformal,Embedding Only,mean_with_attention_and_cls,1,inverse_squared
+conformal,Embedding Only,mean_with_attention_and_cls,3,uniform
+conformal,Embedding Only,mean_with_attention_and_cls,3,inverse
+conformal,Embedding Only,mean_with_attention_and_cls,3,inverse_squared
+conformal,Embedding Only,mean_with_attention_and_cls,5,uniform
+conformal,Embedding Only,mean_with_attention_and_cls,5,inverse
+conformal,Embedding Only,mean_with_attention_and_cls,5,inverse_squared
+conformal,Embedding Only,mean_with_attention_and_cls,7,uniform
+conformal,Embedding Only,mean_with_attention_and_cls,7,inverse
+conformal,Embedding Only,mean_with_attention_and_cls,7,inverse_squared
+conformal,Embedding Only,mean_with_attention_and_cls,9,uniform
+conformal,Embedding Only,mean_with_attention_and_cls,9,inverse
+conformal,Embedding Only,mean_with_attention_and_cls,9,inverse_squared
+conformal,Embedding Only,mean_with_attention_and_cls,99,uniform
+conformal,Embedding Only,mean_with_attention_and_cls,99,inverse
+conformal,Embedding Only,mean_with_attention_and_cls,99,inverse_squared
+conformal,Embedding Only,mean_with_attention_and_cls,999,uniform
+conformal,Embedding Only,mean_with_attention_and_cls,999,inverse
+conformal,Embedding Only,mean_with_attention_and_cls,999,inverse_squared
+conformal,Embedding + Last,mean_with_attention,1,uniform
+conformal,Embedding + Last,mean_with_attention,1,inverse
+conformal,Embedding + Last,mean_with_attention,1,inverse_squared
+conformal,Embedding + Last,mean_with_attention,3,uniform
+conformal,Embedding + Last,mean_with_attention,3,inverse
+conformal,Embedding + Last,mean_with_attention,3,inverse_squared
+conformal,Embedding + Last,mean_with_attention,5,uniform
+conformal,Embedding + Last,mean_with_attention,5,inverse
+conformal,Embedding + Last,mean_with_attention,5,inverse_squared
+conformal,Embedding + Last,mean_with_attention,7,uniform
+conformal,Embedding + Last,mean_with_attention,7,inverse
+conformal,Embedding + Last,mean_with_attention,7,inverse_squared
+conformal,Embedding + Last,mean_with_attention,9,uniform
+conformal,Embedding + Last,mean_with_attention,9,inverse
+conformal,Embedding + Last,mean_with_attention,9,inverse_squared
+conformal,Embedding + Last,mean_with_attention,99,uniform
+conformal,Embedding + Last,mean_with_attention,99,inverse
+conformal,Embedding + Last,mean_with_attention,99,inverse_squared
+conformal,Embedding + Last,mean_with_attention,999,uniform
+conformal,Embedding + Last,mean_with_attention,999,inverse
+conformal,Embedding + Last,mean_with_attention,999,inverse_squared
+conformal,Embedding + Last,mean_with_attention_and_cls,1,uniform
+conformal,Embedding + Last,mean_with_attention_and_cls,1,inverse
+conformal,Embedding + Last,mean_with_attention_and_cls,1,inverse_squared
+conformal,Embedding + Last,mean_with_attention_and_cls,3,uniform
+conformal,Embedding + Last,mean_with_attention_and_cls,3,inverse
+conformal,Embedding + Last,mean_with_attention_and_cls,3,inverse_squared
+conformal,Embedding + Last,mean_with_attention_and_cls,5,uniform
+conformal,Embedding + Last,mean_with_attention_and_cls,5,inverse
+conformal,Embedding + Last,mean_with_attention_and_cls,5,inverse_squared
+conformal,Embedding + Last,mean_with_attention_and_cls,7,uniform
+conformal,Embedding + Last,mean_with_attention_and_cls,7,inverse
+conformal,Embedding + Last,mean_with_attention_and_cls,7,inverse_squared
+conformal,Embedding + Last,mean_with_attention_and_cls,9,uniform
+conformal,Embedding + Last,mean_with_attention_and_cls,9,inverse
+conformal,Embedding + Last,mean_with_attention_and_cls,9,inverse_squared
+conformal,Embedding + Last,mean_with_attention_and_cls,99,uniform
+conformal,Embedding + Last,mean_with_attention_and_cls,99,inverse
+conformal,Embedding + Last,mean_with_attention_and_cls,99,inverse_squared
+conformal,Embedding + Last,mean_with_attention_and_cls,999,uniform
+conformal,Embedding + Last,mean_with_attention_and_cls,999,inverse
+conformal,Embedding + Last,mean_with_attention_and_cls,999,inverse_squared
+conformal,Last Only,mean_with_attention,1,uniform
+conformal,Last Only,mean_with_attention,1,inverse
+conformal,Last Only,mean_with_attention,1,inverse_squared
+conformal,Last Only,mean_with_attention,3,uniform
+conformal,Last Only,mean_with_attention,3,inverse
+conformal,Last Only,mean_with_attention,3,inverse_squared
+conformal,Last Only,mean_with_attention,5,uniform
+conformal,Last Only,mean_with_attention,5,inverse
+conformal,Last Only,mean_with_attention,5,inverse_squared
+conformal,Last Only,mean_with_attention,7,uniform
+conformal,Last Only,mean_with_attention,7,inverse
+conformal,Last Only,mean_with_attention,7,inverse_squared
+conformal,Last Only,mean_with_attention,9,uniform
+conformal,Last Only,mean_with_attention,9,inverse
+conformal,Last Only,mean_with_attention,9,inverse_squared
+conformal,Last Only,mean_with_attention,99,uniform
+conformal,Last Only,mean_with_attention,99,inverse
+conformal,Last Only,mean_with_attention,99,inverse_squared
+conformal,Last Only,mean_with_attention,999,uniform
+conformal,Last Only,mean_with_attention,999,inverse
+conformal,Last Only,mean_with_attention,999,inverse_squared
+conformal,Last Only,mean_with_attention_and_cls,1,uniform
+conformal,Last Only,mean_with_attention_and_cls,1,inverse
+conformal,Last Only,mean_with_attention_and_cls,1,inverse_squared
+conformal,Last Only,mean_with_attention_and_cls,3,uniform
+conformal,Last Only,mean_with_attention_and_cls,3,inverse
+conformal,Last Only,mean_with_attention_and_cls,3,inverse_squared
+conformal,Last Only,mean_with_attention_and_cls,5,uniform
+conformal,Last Only,mean_with_attention_and_cls,5,inverse
+conformal,Last Only,mean_with_attention_and_cls,5,inverse_squared
+conformal,Last Only,mean_with_attention_and_cls,7,uniform
+conformal,Last Only,mean_with_attention_and_cls,7,inverse
+conformal,Last Only,mean_with_attention_and_cls,7,inverse_squared
+conformal,Last Only,mean_with_attention_and_cls,9,uniform
+conformal,Last Only,mean_with_attention_and_cls,9,inverse
+conformal,Last Only,mean_with_attention_and_cls,9,inverse_squared
+conformal,Last Only,mean_with_attention_and_cls,99,uniform
+conformal,Last Only,mean_with_attention_and_cls,99,inverse
+conformal,Last Only,mean_with_attention_and_cls,99,inverse_squared
+conformal,Last Only,mean_with_attention_and_cls,999,uniform
+conformal,Last Only,mean_with_attention_and_cls,999,inverse
+conformal,Last Only,mean_with_attention_and_cls,999,inverse_squared

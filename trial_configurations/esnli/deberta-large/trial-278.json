@@ -1,0 +1,51 @@
+{
+    "K": 3,
+    "cache_dir": "/work/06782/ysu707/ls6/DkNN/.cache",
+    "compute_predict_results": true,
+    "dist_metric": "minkowski",
+    "dist_to_weight_fct": "inverse_squared",
+    "do_DKNN": true,
+    "do_eval": true,
+    "do_predict": true,
+    "do_train": false,
+    "do_train_val_test_split": false,
+    "eval_accumulation_steps": 100,
+    "evaluation_metrics": [
+        "accuracy",
+        "f1",
+        "precision",
+        "recall"
+    ],
+    "input_key": "text",
+    "layers_to_save": [
+        0,
+        24
+    ],
+    "layers_to_save_desc": "Embedding + Last",
+    "leaf_size": 40,
+    "minkowski_power": "2",
+    "model_name_or_path": "./output/toxigen/deberta-large-1/checkpoint-200",
+    "neighbor_method": "KD-Tree",
+    "output_and_save_neighbors": true,
+    "output_dir": "./output/toxigen/deberta-large-1/DKNN/trial-278",
+    "overwrite_output_dir": true,
+    "pad_to_max_length": false,
+    "per_device_eval_batch_size": 32,
+    "per_device_train_batch_size": 32,
+    "poolers_to_use": [
+        "mean_with_attention",
+        "cls"
+    ],
+    "poolers_to_use_desc": "mean_with_attention_and_cls",
+    "prediction_method": "conformal",
+    "read_from_database_path": true,
+    "read_from_scores_path": false,
+    "report_to": "none",
+    "save_database_path": "./data/toxigen/deberta-large-1/train/mean_with_attention_and_cls",
+    "save_logits": true,
+    "save_nonconform_scores_path": "./data/toxigen/deberta-large-1/trial-278.csv",
+    "seed": 42,
+    "test_file": "./data/toxigen/test_data.csv",
+    "train_file": "./data/toxigen/train_data.csv",
+    "validation_file": "./data/toxigen/eval_data.csv"
+}
