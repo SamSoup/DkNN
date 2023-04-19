@@ -667,7 +667,7 @@ def main():
                             writer.write(f"{index}\t{item}\n")
 
                     if data_args.compute_predict_results:
-                        p = EvalPrediction(predictions=prediction_ids, label_ids=test_labels)
+                        p = EvalPrediction(predictions=prediction_ids, label_ids=np.array(test_labels))
                         predict_metrics = compute_metrics(p)
                         # To be JSON-serializable, we need to remove numpy types or zero-d tensors
                         predict_metrics = denumpify_detensorize(predict_metrics)
