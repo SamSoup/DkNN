@@ -658,8 +658,13 @@ def main():
                     predictions = [pred.strip() for pred in predictions]
                     prediction_ids = np.array(list(map(lambda x: generative_label_to_id[x], predictions)))
                     output_prediction_file = os.path.join(training_args.output_dir, "predict_results.txt")
+                    print(prediction_ids)
                     with open(output_prediction_file, "w", encoding="utf-8") as writer:
-                        writer.write("\n".join(prediction_ids))
+                        logger.info(f"***** Writing Predict results *****")
+                        writer.write("index\tprediction\n")
+                        for index, item in enumerate(prediction_ids):
+                            item = label_list[item]
+                            writer.write(f"{index}\t{item}\n")
 
                     if data_args.compute_predict_results:
                         p = EvalPrediction(predictions=prediction_ids, label_ids=test_labels)
