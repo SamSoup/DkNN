@@ -288,11 +288,13 @@ def main():
             if 't5' in model_args.model_name_or_path:
                 result["label"] = tokenizer(examples["label"], 
                                             padding=True, 
-                                            max_length=max_seq_length, 
+                                            max_length=max_seq_length,
                                             truncation=True).input_ids
-                result["label"] = result["label"].masked_fill(
-                    result["label"] == tokenizer.pad_token_id, -100
-                )
+                result["label"] = [
+                    l.masked_fill(
+                        l == tokenizer.pad_token_id, -100
+                    ) for l in result["label"] 
+                ]
             elif label_to_id is not None:
                 result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
         return result
