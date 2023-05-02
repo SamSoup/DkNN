@@ -42,7 +42,12 @@ def save_matrix_with_tags_to_file(filename: str, tags: np.ndarray, mat: np.ndarr
 def load_predictions(work_dir:str, dataset: str, classifier: str):
     return pd.read_csv(f"{work_dir}/output/{dataset}/{classifier}/predict_results.txt", sep="\t")['prediction'].to_list()
 
-def load_whitebox(work_dir:str, dataset: str, classifier: str, pooling_method: str, whitebox: str, layer:int):
+def load_whitebox(work_dir:str, dataset: str, classifier: str, pooler_config: str, whitebox: str, layer:int):
     classifier_category = classifier[:classifier.index("seed")-1]
-    with open(f"{work_dir}/results/{dataset}/{classifier_category}/{pooling_method}/{classifier}_best_{whitebox}_layer{layer}", 'rb') as f:
+    with open(f"{work_dir}/results/{dataset}/{classifier_category}/{pooler_config}/{classifier}_best_{whitebox}_layer{layer}", 'rb') as f:
         return pickle.load(f)
+
+def load_representation(work_dir:str, dataset: str, classifier: str, mode: str, pooler_config: str, layer:int):
+    return np.loadtxt(
+        f"{work_dir}/data/{dataset}/{classifier}/{mode}/{pooler_config}/layer_{layer}.csv"
+    )
