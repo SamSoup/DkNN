@@ -3,6 +3,7 @@ from tqdm.auto import tqdm
 import pandas as pd
 import os, json
 import numpy as np
+import pickle
 
 def mkdir_if_not_exists(dirpath: str):
     if not os.path.exists(dirpath):
@@ -38,3 +39,8 @@ def save_matrix_with_tags_to_file(filename: str, tags: np.ndarray, mat: np.ndarr
                                       threshold=np.inf).removeprefix('[').removesuffix(']')
             f.write(f"{tag}\t{row_str}\n")
 
+def load_predictions(work_dir:str, dataset: str, classifier: str):
+    return pd.read_csv(f"{work_dir}/output/{dataset}/{classifier}/predict_results.txt", sep="\t")['prediction'].to_list()
+
+def load_whitebox(work_dir:str, dataset: str, classifier: str, pooling_method: str, whitebox: str, layer:int):
+    return pickle.load(f"{work_dir}/results/{dataset}/{classifier}/{pooling_method}/{classifier}_best{whitebox}_layer{layer}")
