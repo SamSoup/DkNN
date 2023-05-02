@@ -40,7 +40,8 @@ def save_matrix_with_tags_to_file(filename: str, tags: np.ndarray, mat: np.ndarr
             f.write(f"{tag}\t{row_str}\n")
 
 def load_predictions(work_dir:str, dataset: str, classifier: str):
-    return pd.read_csv(f"{work_dir}/output/{dataset}/{classifier}/predict_results.txt", sep="\t")['prediction'].to_list()
+    return pd.read_csv(f"{work_dir}/output/{dataset}/{classifier}/predict_results.txt"
+                       , sep="\t")['prediction'].to_list()
 
 def load_whitebox(work_dir:str, dataset: str, classifier: str, pooler_config: str, whitebox: str, layer:int):
     classifier_category = classifier[:classifier.index("seed")-1]
@@ -49,5 +50,6 @@ def load_whitebox(work_dir:str, dataset: str, classifier: str, pooler_config: st
 
 def load_representation(work_dir:str, dataset: str, classifier: str, mode: str, pooler_config: str, layer:int):
     return np.loadtxt(
-        f"{work_dir}/data/{dataset}/{classifier}/{mode}/{pooler_config}/layer_{layer}.csv"
+        f"{work_dir}/data/{dataset}/{classifier}/{mode}/{pooler_config}/layer_{layer}.csv",
+        delimiter=','
     )
