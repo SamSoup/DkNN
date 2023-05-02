@@ -44,5 +44,5 @@ def load_predictions(work_dir:str, dataset: str, classifier: str):
 
 def load_whitebox(work_dir:str, dataset: str, classifier: str, pooling_method: str, whitebox: str, layer:int):
     classifier_category = classifier[:classifier.index("seed")-1]
-    with open(f"{work_dir}/results/{dataset}/{classifier_category}/{pooling_method}/{classifier}_best{whitebox}_layer{layer}", 'rb') as f:
+    with open(f"{work_dir}/results/{dataset}/{classifier_category}/{pooling_method}/{classifier}_best_{whitebox}_layer{layer}", 'rb') as f:
         return pickle.load(f)
