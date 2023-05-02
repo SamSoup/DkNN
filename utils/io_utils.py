@@ -43,4 +43,5 @@ def load_predictions(work_dir:str, dataset: str, classifier: str):
     return pd.read_csv(f"{work_dir}/output/{dataset}/{classifier}/predict_results.txt", sep="\t")['prediction'].to_list()
 
 def load_whitebox(work_dir:str, dataset: str, classifier: str, pooling_method: str, whitebox: str, layer:int):
-    return pickle.load(f"{work_dir}/results/{dataset}/{classifier}/{pooling_method}/{classifier}_best{whitebox}_layer{layer}")
+    classifier_category = classifier[:classifier.index("seed")-1]
+    return pickle.load(f"{work_dir}/results/{dataset}/{classifier_category}/{pooling_method}/{classifier}_best{whitebox}_layer{layer}")
