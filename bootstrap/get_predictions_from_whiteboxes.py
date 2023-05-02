@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 
 # for now, only do seed 42, last layer, mean_with_attention
-SEEDS = filter(lambda x: x == 42, SEEDS)
+SEEDS = list(filter(lambda x: x == 42, SEEDS))
 pooler_config = "mean_with_attention"
 
 # load representations from datasets
