@@ -43,8 +43,8 @@ MODELS = [
 WRAPPER_BOXES = [
     "KNN",
     "SVM",
-    "DecsionTree",
-    "L-Means"
+    "Decision_Tree",
+    "L_Means"
 ]
 
 # defines where models outputs are stored
