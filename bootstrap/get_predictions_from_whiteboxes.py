@@ -28,5 +28,5 @@ for dataset in tqdm(DATASETS, desc="datasets"):
                     WORK_DIR, dataset, model_full, pooler_config, whitebox, layer
                 )
                 preds = clf.predict(X_test)
-                predictions[model][whitebox] = preds
+                predictions.loc[model][whitebox] = preds
     predictions.to_csv(f"{dataset}_predictions.csv", index=True, header=True)
