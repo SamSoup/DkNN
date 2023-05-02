@@ -29,4 +29,4 @@ for dataset in tqdm(DATASETS, desc="datasets"):
                 )
                 preds = clf.predict(X_test)
                 predictions.loc[model][whitebox] = preds
-    predictions.to_csv(f"{dataset}_predictions.csv", index=True, header=True)
+    predictions.to_pickle(f"{dataset}_predictions.pkl", index=True, header=True)
