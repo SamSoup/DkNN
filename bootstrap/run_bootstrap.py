@@ -38,7 +38,7 @@ for dataset in tqdm(DATASETS, desc="datasets"):
             for whitebox in tqdm(WRAPPER_BOXES, desc="whiteboxes"):
                 deltas = compute_p_value(
                     original_preds,
-                    whitebox_preds[model][whitebox],
+                    whitebox_preds.loc[model][whitebox],
                     y_test,
                     size=10000, iterations=1e5, seed=42
                 )
