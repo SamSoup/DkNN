@@ -9,23 +9,26 @@ def sample_with_replacement(X: np.ndarray, y: np.ndarray, size=1000):
     # X: (samples, features), y: (samples)
     assert X.shape[0] == y.shape[0]
     indices = np.random.choice(np.arange(X.shape[0]), size, replace=True)
-    return X[indices], y[indices]
+    return X[indices], y[indices], indices
 
-def compute_p_value(classifier_A: BaseEstimator, classifier_B: BaseEstimator, 
-                    X_test: np.ndarray, 
-                    y_test: np.ndarray, 
+def compute_p_value(classifier_A_predictions: np.ndarray,
+                    classifier_B_predictions: np.ndarray, 
+                    X_test: np.ndarray,
+                    y_test: np.ndarray,
                     size=1000, iterations=1e5, seed=42):
     np.random.seed(seed) # for reproducability
+    assert classifier_A_predictions.size == classifier_B_predictions.size
+    assert classifier_A_predictions.size == y_test.size
     deltas = {
-        # metric name -> {delta:<>, count:<>}
+        # metric name -> {delta:<>, count:<>, p-value:<>}
     }
     # compute initial deltas
     A_metrics = compute_metrics(
-        y_test, classifier_A.predict(X_test), 
+        y_test, classifier_A_predictions, 
         prefix="test", is_multiclass=False
     )
     B_metrics = compute_metrics(
-        y_test, classifier_B.predict(X_test), 
+        y_test, classifier_B_predictions, 
         prefix="test", is_multiclass=False
     )
     metric_names = A_metrics.keys()
@@ -37,13 +40,13 @@ def compute_p_value(classifier_A: BaseEstimator, classifier_B: BaseEstimator,
             'count': 0
         }
     for _ in iterations:
-        X_boot, y_boot = sample_with_replacement(X_test, y_test, size=size)
+        X_boot, y_boot, indices = sample_with_replacement(X_test, y_test, size=size)
         A_metrics = compute_metrics(
-            y_boot, classifier_A.predict(X_boot), 
+            y_boot, classifier_A_predictions[indices], 
             prefix="test", is_multiclass=False
         )
         B_metrics = compute_metrics(
-            y_boot, classifier_B.predict(X_boot), 
+            y_boot, classifier_B_predictions[indices], 
             prefix="test", is_multiclass=False
         )
         for m in metric_names:

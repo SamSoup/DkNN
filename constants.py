@@ -33,6 +33,13 @@ BASELINES = [
     'SentenceBert'
 ]
 
+METRICS = [
+    "accuracy",
+    "precision",
+    "recall",
+    "f1"
+]
+
 MODELS = [
     "bart-large",
     "deberta-large",
