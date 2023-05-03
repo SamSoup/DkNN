@@ -24,6 +24,7 @@ def create_result_df(models, metrics, whiteboxes):
 for dataset in tqdm(DATASETS, desc="datasets"):
     data = load_dataset(f"Samsoup/{dataset}", use_auth_token=True)
     y_test = np.array(data['test']['label'])
+    is_multiclass = np.unique(y_test).size > 2
     # result file layout: 
     results = create_result_df(MODELS, METRICS, WRAPPER_BOXES)
     for model in tqdm(MODELS, desc="models"):
@@ -40,6 +41,7 @@ for dataset in tqdm(DATASETS, desc="datasets"):
                     original_preds,
                     whitebox_preds.loc[model][whitebox],
                     y_test,
+                    is_multiclass,
                     size=10000, iterations=1e5, seed=42
                 )
                 for metric in deltas:

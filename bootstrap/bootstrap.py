@@ -11,6 +11,7 @@ def sample_with_replacement(X: np.ndarray, size=1000):
 def compute_p_value(classifier_A_predictions: np.ndarray,
                     classifier_B_predictions: np.ndarray, 
                     y_test: np.ndarray,
+                    is_multiclass: bool,
                     size=1000, iterations=1e5, seed=42):
     np.random.seed(seed) # for reproducability
     assert classifier_A_predictions.size == classifier_B_predictions.size
@@ -21,11 +22,11 @@ def compute_p_value(classifier_A_predictions: np.ndarray,
     # compute initial deltas
     A_metrics = compute_metrics(
         y_test, classifier_A_predictions, 
-        prefix="test", is_multiclass=False
+        prefix="test", is_multiclass=is_multiclass
     )
     B_metrics = compute_metrics(
         y_test, classifier_B_predictions, 
-        prefix="test", is_multiclass=False
+        prefix="test", is_multiclass=is_multiclass
     )
     metric_names = A_metrics.keys()
     for m in metric_names:
@@ -39,11 +40,11 @@ def compute_p_value(classifier_A_predictions: np.ndarray,
         X_boot, y_boot, indices = sample_with_replacement(y_test, size=size)
         A_metrics = compute_metrics(
             y_boot, classifier_A_predictions[indices], 
-            prefix="test", is_multiclass=False
+            prefix="test", is_multiclass=is_multiclass
         )
         B_metrics = compute_metrics(
             y_boot, classifier_B_predictions[indices], 
-            prefix="test", is_multiclass=False
+            prefix="test", is_multiclass=is_multiclass
         )
         for m in metric_names:
             boot_delta = abs(A_metrics[m] - B_metrics[m])

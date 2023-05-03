@@ -18,6 +18,10 @@ def compute_metrics(y_true, y_pred, prefix: str, is_multiclass: bool=False):
             results[f'{prefix}_{avg}_recall'] = recall_score(
                 y_true, y_pred, average=avg
             )
+        # simply set accuracy, precision, recall, f1 = macro-averaged
+        results[f'{prefix}_f1'] = results[f'{prefix}_macro_f1']
+        results[f'{prefix}_precision'] = results[f'{prefix}_macro_precision']
+        results[f'{prefix}_recall'] = results[f'{prefix}_macro_recall']
         # also get per class f1, precision, recall
         fl_per_class = f1_score(y_true, y_pred, average=None)
         precision_per_class = precision_score(y_true, y_pred, average=None)
