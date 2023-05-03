@@ -28,9 +28,6 @@ for dataset in tqdm(DATASETS, desc="datasets"):
     results = create_result_df(MODELS, METRICS, WRAPPER_BOXES)
     for model in tqdm(MODELS, desc="models"):
         for seed in SEEDS:
-            X_test = load_representation(
-                WORK_DIR, dataset, model_full, "test", pooler_config, layer
-            )
             model_full = f"{model}-seed-{seed}"
             layer = MODEL_METADATAS[model]['num_layers']-1
             # load model's original predictions
@@ -42,7 +39,6 @@ for dataset in tqdm(DATASETS, desc="datasets"):
                 deltas = compute_p_value(
                     original_preds,
                     whitebox_preds[model][whitebox],
-                    X_test,
                     y_test,
                     size=10000, iterations=1e5, seed=42
                 )

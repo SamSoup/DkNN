@@ -5,15 +5,12 @@ import math
 from sklearn.metrics import get_scorer
 from sklearn.base import BaseEstimator
 
-def sample_with_replacement(X: np.ndarray, y: np.ndarray, size=1000):
-    # X: (samples, features), y: (samples)
-    assert X.shape[0] == y.shape[0]
+def sample_with_replacement(X: np.ndarray, size=1000):
     indices = np.random.choice(np.arange(X.shape[0]), size, replace=True)
-    return X[indices], y[indices], indices
+    return X[indices], indices
 
 def compute_p_value(classifier_A_predictions: np.ndarray,
                     classifier_B_predictions: np.ndarray, 
-                    X_test: np.ndarray,
                     y_test: np.ndarray,
                     size=1000, iterations=1e5, seed=42):
     np.random.seed(seed) # for reproducability
@@ -40,7 +37,7 @@ def compute_p_value(classifier_A_predictions: np.ndarray,
             'count': 0
         }
     for _ in iterations:
-        X_boot, y_boot, indices = sample_with_replacement(X_test, y_test, size=size)
+        X_boot, y_boot, indices = sample_with_replacement(y_test, size=size)
         A_metrics = compute_metrics(
             y_boot, classifier_A_predictions[indices], 
             prefix="test", is_multiclass=False
