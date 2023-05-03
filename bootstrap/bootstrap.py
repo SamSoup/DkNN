@@ -1,7 +1,6 @@
 from typing import List, Callable, Dict
 from utils import compute_metrics
 import numpy as np
-import math
 from sklearn.metrics import get_scorer
 from sklearn.base import BaseEstimator
 
@@ -33,7 +32,7 @@ def compute_p_value(classifier_A_predictions: np.ndarray,
         # gain should always be positive, so take absolute value
         # original delta, number of times where δ(x(i)) > 2δ(x)
         deltas[m] = {
-            'delta': math.abs(A_metrics[m] - B_metrics[m]),
+            'delta': abs(A_metrics[m] - B_metrics[m]),
             'count': 0
         }
     for _ in iterations:
@@ -47,7 +46,7 @@ def compute_p_value(classifier_A_predictions: np.ndarray,
             prefix="test", is_multiclass=False
         )
         for m in metric_names:
-            boot_delta = math.abs(A_metrics[m] - B_metrics[m])
+            boot_delta = abs(A_metrics[m] - B_metrics[m])
             if boot_delta > 2*deltas[m]['delta']:
                 deltas[m]['count'] += 1
     # estimate the p-values
