@@ -42,7 +42,7 @@ for dataset in tqdm(DATASETS, desc="datasets"):
                     whitebox_preds.loc[model][whitebox],
                     y_test,
                     is_multiclass,
-                    size=10000, iterations=1e5, seed=42
+                    size=5000, iterations=10000, seed=42
                 )
                 for metric in deltas:
                     results.loc[whitebox][model][metric] = deltas[metric]['p-value']
