@@ -16,9 +16,10 @@ def create_result_df(models, metrics, whiteboxes):
     Creates a empty dataframe with index = whitebox classifier names,
     and a multilevel column index of models * metrics
     """
-    df = pd.DataFrame(np.nan, index=whiteboxes, columns=[])
-    df.columns = pd.MultiIndex.from_product([models, metrics], names=['models', 'metrics'])
-    return df
+    return pd.DataFrame(
+        np.nan, index=whiteboxes, 
+        columns=pd.MultiIndex.from_product([models, metrics], names=['models', 'metrics'])
+    )
 
 for dataset in tqdm(DATASETS, desc="datasets"):
     data = load_dataset(f"Samsoup/{dataset}", use_auth_token=True)
