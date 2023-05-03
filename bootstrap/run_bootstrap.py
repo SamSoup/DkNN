@@ -22,7 +22,7 @@ def create_result_df(models, metrics, whiteboxes):
 
 for dataset in tqdm(DATASETS, desc="datasets"):
     data = load_dataset(f"Samsoup/{dataset}", use_auth_token=True)
-    y_test = np.array(data['label'])
+    y_test = np.array(data['test']['label'])
     # result file layout: 
     results = create_result_df(MODELS, METRICS, WRAPPER_BOXES)
     for model in tqdm(MODELS, desc="models"):
