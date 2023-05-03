@@ -16,7 +16,7 @@ def create_result_df(models, metrics, whiteboxes):
     Creates a empty dataframe with index = whitebox classifier names,
     and a multilevel column index of models * metrics
     """
-    df = pd.DataFrame(np.nan, index=whiteboxes)
+    df = pd.DataFrame(np.nan, index=whiteboxes, columns=[])
     df.columns = pd.MultiIndex.from_product([models, metrics], names=['models', 'metrics'])
     return df
 
