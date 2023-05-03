@@ -36,8 +36,8 @@ def compute_p_value(classifier_A_predictions: np.ndarray,
             'delta': abs(A_metrics[m] - B_metrics[m]),
             'count': 0
         }
-    for _ in iterations:
-        X_boot, y_boot, indices = sample_with_replacement(y_test, size=size)
+    for _ in range(iterations):
+        y_boot, indices = sample_with_replacement(y_test, size=size)
         A_metrics = compute_metrics(
             y_boot, classifier_A_predictions[indices], 
             prefix="test", is_multiclass=is_multiclass
