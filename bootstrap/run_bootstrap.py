@@ -2,7 +2,7 @@ from bootstrap import compute_p_value
 from tqdm.auto import tqdm
 from datasets import load_dataset
 from constants import DATASETS, MODELS, WORK_DIR, SEEDS, METRICS, MODEL_METADATAS, WRAPPER_BOXES
-from utils import load_predictions, load_representation
+from utils import load_predictions
 import itertools
 import pandas as pd
 import numpy as np
@@ -42,7 +42,7 @@ for dataset in tqdm(DATASETS, desc="datasets"):
                     whitebox_preds.loc[model][whitebox],
                     y_test,
                     is_multiclass,
-                    size=5000, iterations=10000, seed=42
+                    size=y_test.size, iterations=10000, seed=42
                 )
                 for metric in METRICS:
                     results.loc[whitebox][model][metric] = deltas[f'test_{metric}']['p-value']
