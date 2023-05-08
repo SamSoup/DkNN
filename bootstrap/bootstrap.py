@@ -34,7 +34,8 @@ def compute_p_value(classifier_A_predictions: np.ndarray,
         # original delta, number of times where δ(x(i)) > 2δ(x)
         deltas[m] = {
             'delta': abs(A_metrics[m] - B_metrics[m]),
-            'count': 0
+            'count': 0,
+            'is_A_greater': A_metrics[m] >= B_metrics[m] # A > B, else B > A
         }
     for _ in range(iterations):
         y_boot, indices = sample_with_replacement(y_test, size=size)
@@ -47,11 +48,14 @@ def compute_p_value(classifier_A_predictions: np.ndarray,
             prefix="test", is_multiclass=is_multiclass
         )
         for m in metric_names:
-            boot_delta = abs(A_metrics[m] - B_metrics[m])
+            if deltas[m]['is_A_greater']:
+                boot_delta = A_metrics[m] - B_metrics[m]
+            else:
+                boot_delta = B_metrics[m] - A_metrics[m]
             if boot_delta > 2*deltas[m]['delta']:
                 deltas[m]['count'] += 1
     # estimate the p-values
     for m in metric_names:
-        deltas[m]['p-value'] = deltas[m]['count'] / iterations
+        deltas[m]['p-value'] = 1 - deltas[m]['count'] / iterations
 
     return deltas
