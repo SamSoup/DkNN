@@ -44,6 +44,8 @@ for dataset in tqdm(DATASETS, desc="datasets"):
                     is_multiclass,
                     size=5000, iterations=10000, seed=42
                 )
+                print(deltas)
                 for metric in deltas:
                     results.loc[whitebox][model][metric] = deltas[metric]['p-value']
+    print(results)
     results.to_pickle(f"{dataset}_significance_tests.pkl")
