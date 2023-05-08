@@ -3,7 +3,6 @@ from tqdm.auto import tqdm
 from datasets import load_dataset
 from constants import DATASETS, MODELS, WORK_DIR, SEEDS, METRICS, MODEL_METADATAS, WRAPPER_BOXES
 from utils import load_predictions
-import itertools
 import pandas as pd
 import numpy as np
 
@@ -20,6 +19,8 @@ def create_result_df(models, metrics, whiteboxes):
         np.nan, index=whiteboxes, 
         columns=pd.MultiIndex.from_product([models, metrics], names=['models', 'metrics'])
     )
+
+DATASETS = ['esnli'] # TODO: remove after
 
 for dataset in tqdm(DATASETS, desc="datasets"):
     data = load_dataset(f"Samsoup/{dataset}", use_auth_token=True)

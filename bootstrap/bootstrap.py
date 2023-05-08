@@ -1,8 +1,5 @@
-from typing import List, Callable, Dict
 from utils import compute_metrics
 import numpy as np
-from sklearn.metrics import get_scorer
-from sklearn.base import BaseEstimator
 
 def sample_with_replacement(X: np.ndarray, size=1000):
     indices = np.random.choice(np.arange(X.shape[0]), size, replace=True)
