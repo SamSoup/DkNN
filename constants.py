@@ -110,7 +110,7 @@ DATA = {
 
 # dataset name -> split -> labels
 LABELS = {
-    {
+    dataset: {
         split: np.array(DATA[dataset][split])
         for split in SPLITS
     }
