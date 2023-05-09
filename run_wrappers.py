@@ -163,7 +163,7 @@ for dataset, layer_available in tqdm(DATASETS.items(), desc="Datasets"):
                     }
                     y_preds = run_whiteboxes(
                         **X, y_train=Y['y_train'], y_eval=Y['y_eval'],
-                        whiteboxes=whiteboxes,
+                        whiteboxes=whiteboxes[dataset],
                         model_name=model_name_with_seed,
                         save_path=save_whitebox_path_model, 
                         layer_postfix=f"layer{layer}"
