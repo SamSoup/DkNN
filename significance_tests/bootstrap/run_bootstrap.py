@@ -5,6 +5,7 @@ from constants import DATASETS, MODELS, WORK_DIR, SEEDS, METRICS, MODEL_METADATA
 from utils import load_predictions
 import pandas as pd
 import numpy as np
+import os
 
 # for now, only do seed 42, last layer, mean_with_attention
 SEEDS = list(filter(lambda x: x == 42, SEEDS))
@@ -35,7 +36,7 @@ for dataset in tqdm(DATASETS, desc="datasets"):
             # load model's original predictions
             original_preds = np.array(load_predictions(WORK_DIR, dataset, model_full))
             # load model's whitebox predictions
-            whitebox_preds = pd.read_pickle(f'{dataset}_predictions.pkl')
+            whitebox_preds = pd.read_pickle(os.path.join(os.pardir, f'{dataset}_predictions.pkl'))
             # for each metric, compute sig test for the model to each wrapper box
             for whitebox in tqdm(WRAPPER_BOXES, desc="whiteboxes"):
                 deltas = compute_bootstrap_p_value(
