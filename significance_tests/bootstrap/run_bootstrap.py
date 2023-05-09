@@ -29,14 +29,15 @@ for dataset in tqdm(DATASETS, desc="datasets"):
     is_multiclass = np.unique(y_test).size > 2
     # result file layout: 
     results = create_result_df(MODELS, METRICS, WRAPPER_BOXES)
+    whitebox_preds = pd.read_pickle(
+        os.path.join(WORK_DIR, 'data', dataset, f'{dataset}_wrapperbox_predictions.pkl')
+    )
     for model in tqdm(MODELS, desc="models"):
         for seed in SEEDS:
             model_full = f"{model}-seed-{seed}"
             layer = MODEL_METADATAS[model]['num_layers']-1
             # load model's original predictions
             original_preds = np.array(load_predictions(WORK_DIR, dataset, model_full))
-            # load model's whitebox predictions
-            whitebox_preds = pd.read_pickle(os.path.join(os.pardir, f'{dataset}_predictions.pkl'))
             # for each metric, compute sig test for the model to each wrapper box
             for whitebox in tqdm(WRAPPER_BOXES, desc="whiteboxes"):
                 deltas = compute_bootstrap_p_value(
