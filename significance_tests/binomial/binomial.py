@@ -35,7 +35,9 @@ def compute_binomial_p_value(
     # alternative: p1 \= p2
     metric_names = A_metrics.keys()
     for m in metric_names:
-        z = compute_z_score(A_metrics[m], B_metrics[m])
+        z = compute_z_score(
+            A_metrics[m], B_metrics[m], 
+            classifier_A_predictions.size, classifier_B_predictions.size)
         p_values[m] = scipy.stats.norm.sf(abs(z))*2
 
     return p_values
