@@ -34,12 +34,14 @@ for dataset in tqdm(DATASETS, desc="datasets"):
         for seed in SEEDS:
             model_full = f"{model}-seed-{seed}"
             layer = MODEL_METADATAS[model]['num_layers']-1
-            # load model's original predictions
-            original_preds = np.array(load_predictions(WORK_DIR, dataset, model_full))
             # for each metric, compute metrics for the model to each wrapper box
             for clf in tqdm(classifiers, desc="original+whiteboxes"):
+                if clf == "original":
+                    preds = np.array(load_predictions(WORK_DIR, dataset, model_full))
+                else:
+                    preds = whitebox_preds.loc[model][clf]
                 metrics = compute_metrics(
-                    y_test, whitebox_preds.loc[model][clf], 
+                    y_test, preds,
                     prefix="test", is_multiclass=is_multiclass
                 )
                 for metric in METRICS:
