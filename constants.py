@@ -1,3 +1,4 @@
+from datasets import load_dataset
 import sys
 import os
 import pandas as pd
@@ -19,8 +20,8 @@ SPLITS = ['train', 'eval', 'test']
 
 # dataset -> layers computed
 DATASETS = {
-    'toxigen': 'Last Only',
-    'esnli': 'Last Only'
+    'toxigen': ['Last Only'],
+    'esnli': ['Last Only']
 }
 
 LAYER_CONFIGS = [
@@ -77,41 +78,44 @@ MODEL_METADATAS = {
         'available_poolers': [
             "mean_with_attention",
             # "mean_with_attention_and_eos"
-            ]
-        },
+        ]
+    },
     "deberta-large": {
         'num_layers': 25,
         'available_poolers': [
             "mean_with_attention",
             # "mean_with_attention_and_cls"
-            ]
-        },
+        ]
+    },
     "flan-t5-large": {
         'num_layers': 50,
         'available_poolers': [
             "mean_with_attention",
             # "encoder_mean_with_attention_and_decoder_flatten"
-            ]
-        },
+        ]
+    },
     "t5-large": {
         'num_layers': 50,
         'available_poolers': [
             "mean_with_attention",
             # "encoder_mean_with_attention_and_decoder_flatten"
-            ]
-        }
+        ]
+    }
+}
+
+DATA = {
+    dataset: load_dataset(f"Samsoup/{dataset}", use_auth_token=True)
+    for dataset in DATASETS
 }
 
 # dataset name -> split -> labels
-LABELS = {}
-for dataset in DATASETS:
-    data_dir = os.path.join(WORK_DIR, "data", dataset)
-    LABELS[dataset] = {
-        f'y_{split}': pd.read_csv(
-                os.path.join(data_dir, f"{split}_data.csv")
-            )['label'].to_numpy()
+LABELS = {
+    {
+        split: np.array(DATA[dataset][split])
         for split in SPLITS
     }
+    for dataset in DATASETS
+}
 
 DATA_PATH = os.path.join(
     WORK_DIR,

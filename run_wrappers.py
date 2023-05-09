@@ -29,7 +29,6 @@ from constants import (
     DATASETS,
     DATA_PATH,
     LABELS,
-    LAYER_CONFIGS,
     MODELS,
     MODEL_CONFIGS,
     MODEL_METADATAS,
@@ -131,7 +130,7 @@ def add_to_dataframe(df, results: Dict[str, float], **kwargs):
     )
 
 # compute the white box results for the different transformers
-for dataset, layer_available in tqdm(DATASETS.items(), desc="Datasets"):
+for dataset, layer_configs in tqdm(DATASETS.items(), desc="Datasets"):
     save_whitebox_path = os.path.join(WORK_DIR, "results", dataset)
     model_configs = MODEL_CONFIGS[dataset]
     Y = LABELS[dataset]
@@ -140,61 +139,64 @@ for dataset, layer_available in tqdm(DATASETS.items(), desc="Datasets"):
     for model_name in tqdm(MODELS, desc="Models"):
         num_layers = MODEL_METADATAS[model_name]['num_layers']
         pooler_configs = MODEL_METADATAS[model_name]['available_poolers']
-        layers_to_save = get_actual_layers_to_save(layer_available, num_layers)
-        models = model_configs[model_name] # same model but diff seeds
         for seed in tqdm(SEEDS, desc="seeds"):
             model_name_with_seed = f"{model_name}-seed-{seed}"
-            for pooler_config in tqdm(pooler_configs, desc="Poolers"):
-                save_whitebox_path_model = os.path.join(
-                    save_whitebox_path, model_name, pooler_config
-                )
-                all_y_preds = {wrapper: {} for wrapper in whiteboxes}
-                for layer in tqdm(layers_to_save, desc="layers"):
-                    X  = {
-                        f'X_{split}': np.loadtxt(
-                            DATA_PATH.format(
-                                dataset=dataset,
-                                model=model_name_with_seed,
-                                mode=split,
-                                pooler_config=pooler_config,
-                                layer=layer
-                            ),
-                            delimiter=','
-                        ) for split in SPLITS
-                    }
-                    y_preds = run_whiteboxes(
-                        **X, y_train=Y['y_train'], y_eval=Y['y_eval'],
-                        whiteboxes=whiteboxes,
-                        model_name=model_name_with_seed,
-                        save_path=save_whitebox_path_model, 
-                        layer_postfix=f"layer{layer}"
+            # layer -> {wrapper box: preds}
+            all_y_preds = {}
+            # layer_config -> wrapper_name -> predictions_stacked
+            layer_to_wrapper_to_preds = {}
+            for layer_config in tqdm(layer_configs, desc="Layer Configs"):
+                layers_to_save = get_actual_layers_to_save(layer_config, num_layers)
+                for pooler_config in tqdm(pooler_configs, desc="Poolers"):
+                    save_whitebox_path_model = os.path.join(
+                        save_whitebox_path, model_name, pooler_config
                     )
-                    for wrapper in whiteboxes:
-                        all_y_preds[wrapper][layer] = y_preds[wrapper]
-                # layer_config -> wrapper_name -> predictions_stacked
-                layer_to_wrapper_to_preds = {}
-                for layer_config in tqdm(LAYER_CONFIGS, desc="layer configs"):
-                    # subset the predictions based on actual layers used
-                    layers_to_compute = get_actual_layers_to_save(layer_config, num_layers)
-                    layer_to_wrapper_to_preds[layer_config] = {}
-                    for wrapper in tqdm(whiteboxes):
-                        y_preds_stacked = np.concatenate([
-                            all_y_preds[wrapper][l].reshape(-1,1) 
-                            for l in layers_to_compute
-                        ], axis=1)
-                        layer_to_wrapper_to_preds[layer_config][wrapper] = y_preds_stacked
-                        y_pred = find_majority_batched(y_preds_stacked)
-                        results = compute_metrics(Y['y_test'], y_pred, 'predict', is_multiclass)
-                        results_df = add_to_dataframe(
-                            results_df,
-                            results,
-                            Dataset=dataset,
-                            Model=model_name,
-                            Whitebox=wrapper,
-                            Layers_Used=layer_config,
-                            Seed=seed,
-                            Poolers_Used=pooler_config
-                        )
+                    for layer in tqdm(layers_to_save, desc="layers"):
+                        if layer not in all_y_preds:
+                            X  = {
+                                f'X_{split}': np.loadtxt(
+                                    DATA_PATH.format(
+                                        dataset=dataset,
+                                        model=model_name_with_seed,
+                                        mode=split,
+                                        pooler_config=pooler_config,
+                                        layer=layer
+                                    ),
+                                    delimiter=','
+                                ) for split in SPLITS
+                            }
+                            y_preds = run_whiteboxes(
+                                **X, y_train=Y['train'], y_eval=Y['eval'],
+                                whiteboxes=whiteboxes,
+                                model_name=model_name_with_seed,
+                                save_path=save_whitebox_path_model, 
+                                layer_postfix=f"layer{layer}"
+                            )
+                            for wrapper in whiteboxes:
+                                all_y_preds[layer][wrapper] = y_preds[wrapper]
+                # for configurations with more than one layers, then each 
+                # inference example has a prediction from each layer. in this 
+                # case, we stack the predictions into (n, num_layers) and retrieve
+                # the majority voted prediction per n
+                layer_to_wrapper_to_preds[layer_config] = {}
+                for wrapper in tqdm(whiteboxes):
+                    y_preds_stacked = np.concatenate([
+                        all_y_preds[l][wrapper].reshape(-1,1) 
+                        for l in layers_to_save
+                    ], axis=1)
+                    layer_to_wrapper_to_preds[layer_config][wrapper] = y_preds_stacked
+                    y_pred = find_majority_batched(y_preds_stacked)
+                    results = compute_metrics(Y['test'], y_pred, 'predict', is_multiclass)
+                    results_df = add_to_dataframe(
+                        results_df,
+                        results,
+                        Dataset=dataset,
+                        Model=model_name,
+                        Whitebox=wrapper,
+                        Layers_Used=layer_config,
+                        Seed=seed,
+                        Poolers_Used=pooler_config
+                    )
                     # also, run stacked predictions combining KNN, SVM, and DT
                     # ensemble = np.hstack([
                     #     layer_to_wrapper_to_preds[layer_config]['KNN'], 
