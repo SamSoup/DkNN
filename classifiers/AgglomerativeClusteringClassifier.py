@@ -19,7 +19,7 @@ from sklearn.cluster import AgglomerativeClustering
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram
 from collections import Counter
-from utils_copy import find_majority
+from utils import find_majority
 
 class AgglomerativeClusteringClassifier(BaseEstimator, ClassifierMixin):
     def __init__(

@@ -43,11 +43,12 @@ accurate near the root but increasingly noisy as you approach the sparse leaves.
 """
 
 import numpy as np
+import random
 from sklearn.tree import DecisionTreeClassifier, _tree
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 from sklearn.utils.multiclass import unique_labels
-from utils_copy import find_majority
+from utils import find_majority
 from scipy.spatial.distance import cdist
 
 class DecisionTreeProxyClassifier(BaseEstimator, ClassifierMixin):
@@ -134,7 +135,7 @@ class DecisionTreeProxyClassifier(BaseEstimator, ClassifierMixin):
                     return preorder_traversal(r)
                 else:
                     # break ties randomly
-                    c = randint(0, 1)
+                    c = random.randint(0, 1)
                     return preorder_traversal([l, r][c])
             else:
                 indices = self.cluster_indices[node]
