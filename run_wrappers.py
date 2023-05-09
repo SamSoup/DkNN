@@ -153,6 +153,7 @@ for dataset, layer_configs in tqdm(DATASETS.items(), desc="Datasets"):
                     )
                     for layer in tqdm(layers_to_save, desc="layers"):
                         if layer not in all_y_preds:
+                            all_y_preds[layer] = {} # wrapper box -> preds
                             X  = {
                                 f'X_{split}': np.loadtxt(
                                     DATA_PATH.format(
