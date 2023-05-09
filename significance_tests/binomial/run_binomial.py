@@ -1,4 +1,4 @@
-from bootstrap import compute_p_value
+from binomial import compute_binomial_p_value
 from tqdm.auto import tqdm
 from datasets import load_dataset
 from constants import DATASETS, MODELS, WORK_DIR, SEEDS, METRICS, MODEL_METADATAS, WRAPPER_BOXES
@@ -20,8 +20,6 @@ def create_result_df(models, metrics, whiteboxes):
         columns=pd.MultiIndex.from_product([models, metrics], names=['models', 'metrics'])
     )
 
-DATASETS = ['esnli'] # TODO: remove after
-
 for dataset in tqdm(DATASETS, desc="datasets"):
     data = load_dataset(f"Samsoup/{dataset}", use_auth_token=True)
     y_test = np.array(data['test']['label'])
@@ -38,13 +36,12 @@ for dataset in tqdm(DATASETS, desc="datasets"):
             whitebox_preds = pd.read_pickle(f'{dataset}_predictions.pkl')
             # for each metric, compute sig test for the model to each wrapper box
             for whitebox in tqdm(WRAPPER_BOXES, desc="whiteboxes"):
-                deltas = compute_p_value(
+                p_values = compute_binomial_p_value(
                     original_preds,
                     whitebox_preds.loc[model][whitebox],
                     y_test,
-                    is_multiclass,
-                    size=y_test.size, iterations=10000, seed=42
+                    is_multiclass
                 )
                 for metric in METRICS:
-                    results.loc[whitebox][model][metric] = deltas[f'test_{metric}']['p-value']
-    results.to_pickle(f"{dataset}_significance_tests.pkl")
+                    results.loc[whitebox][model][metric] = p_values[f'test_{metric}']
+    results.to_pickle(f"{dataset}_binomial_significance_tests.pkl")

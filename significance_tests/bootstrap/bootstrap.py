@@ -5,11 +5,13 @@ def sample_with_replacement(X: np.ndarray, size=1000):
     indices = np.random.choice(np.arange(X.shape[0]), size, replace=True)
     return X[indices], indices
 
-def compute_p_value(classifier_A_predictions: np.ndarray,
-                    classifier_B_predictions: np.ndarray, 
-                    y_test: np.ndarray,
-                    is_multiclass: bool,
-                    size=1000, iterations=10000, seed=42):
+def compute_bootstrap_p_value(
+    classifier_A_predictions: np.ndarray,
+    classifier_B_predictions: np.ndarray, 
+    y_test: np.ndarray,
+    is_multiclass: bool,
+    size=1000, iterations=10000, seed=42
+):
     np.random.seed(seed) # for reproducability
     assert classifier_A_predictions.size == classifier_B_predictions.size
     assert classifier_A_predictions.size == y_test.size
