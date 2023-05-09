@@ -111,7 +111,7 @@ DATA = {
 # dataset name -> split -> labels
 LABELS = {
     dataset: {
-        split: np.array(DATA[dataset][split])
+        split: np.array(DATA[dataset][split]['label'])
         for split in SPLITS
     }
     for dataset in DATASETS
