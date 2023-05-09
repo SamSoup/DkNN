@@ -11,6 +11,8 @@ import os
 SEEDS = list(filter(lambda x: x == 42, SEEDS))
 pooler_config = "mean_with_attention"
 
+DATASETS = ["toxigen"] # TODO: Remove
+
 def create_result_df(models, metrics, whiteboxes):
     """
     Creates a empty dataframe with index = whitebox classifier names,
@@ -26,7 +28,7 @@ for dataset in tqdm(DATASETS, desc="datasets"):
     y_test = np.array(data['test']['label'])
     is_multiclass = np.unique(y_test).size > 2
     whitebox_preds = pd.read_pickle(
-        os.path.join(WORK_DIR, 'data', dataset, f'{dataset}_wrapperbox_predictions.pkl')
+        os.path.join(WORK_DIR, 'data', dataset, f'{dataset}_wrapper_box_predictions.pkl')
     )
     # result file layout: 
     results = create_result_df(MODELS, METRICS, WRAPPER_BOXES)
@@ -46,4 +48,6 @@ for dataset in tqdm(DATASETS, desc="datasets"):
                 )
                 for metric in METRICS:
                     results.loc[whitebox][model][metric] = p_values[f'test_{metric}']
-    results.to_pickle(f"{dataset}_binomial_significance_tests.pkl")
+    results.to_pickle(
+        os.path.join(WORK_DIR, 'data', dataset, f"{dataset}_binomial_significance_tests.pkl")
+    )

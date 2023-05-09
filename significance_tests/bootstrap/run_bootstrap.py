@@ -30,7 +30,7 @@ for dataset in tqdm(DATASETS, desc="datasets"):
     # result file layout: 
     results = create_result_df(MODELS, METRICS, WRAPPER_BOXES)
     whitebox_preds = pd.read_pickle(
-        os.path.join(WORK_DIR, 'data', dataset, f'{dataset}_wrapperbox_predictions.pkl')
+        os.path.join(WORK_DIR, 'data', dataset, f'{dataset}_wrapper_box_predictions.pkl')
     )
     for model in tqdm(MODELS, desc="models"):
         for seed in SEEDS:
@@ -49,4 +49,6 @@ for dataset in tqdm(DATASETS, desc="datasets"):
                 )
                 for metric in METRICS:
                     results.loc[whitebox][model][metric] = deltas[f'test_{metric}']['p-value']
-    results.to_pickle(f"{dataset}_significance_tests.pkl")
+    results.to_pickle(
+        os.path.join(WORK_DIR, 'data', dataset, f"{dataset}_significance_tests.pkl")
+    )

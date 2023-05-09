@@ -85,6 +85,12 @@ all_whiteboxes = {
     }
 }
 
+DATASETS = {
+    'toxigen': ['Last Only']
+    # 'esnli': ['Last Only']
+}
+
+
 results_df = pd.DataFrame(
     columns = [
         'Dataset', 'Model', 'Whitebox', 'Layers_Used', 'Poolers_Used', 'Seed',
