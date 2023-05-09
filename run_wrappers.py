@@ -55,7 +55,7 @@ sys.path.append(WORK_DIR)
 # these take several hyperparameters and honestly I do not know how to 
 # parse all of them from commandline, so I just put some I think are reasonable
 # ones for now
-whiteboxes = {
+all_whiteboxes = {
     'toxigen': {
         'SVM': (SVC(gamma='auto', class_weight='balanced', kernel="linear", random_state=42), {}),
         'Decision_Tree': (DecisionTreeClassifier(max_depth=3, min_samples_leaf=10, random_state=42), {}),
@@ -112,7 +112,7 @@ def run_whiteboxes(X_train, X_eval, X_test, y_train, y_eval, whiteboxes, **kwarg
     preds = {}
     is_multiclass = np.unique(y_train).size > 2
     scoring = "f1" if not is_multiclass else 'accuracy'
-    for name, clf_set in tqdm(whiteboxes.items()):
+    for name, clf_set in tqdm(whiteboxes.items(), desc="whiteboxes"):
         clf, parameters = clf_set
         if parameters:
             clf = GridSearchCV(clf, parameters, n_jobs=-1, scoring=scoring)
@@ -136,6 +136,7 @@ for dataset, layer_available in tqdm(DATASETS.items(), desc="Datasets"):
     model_configs = MODEL_CONFIGS[dataset]
     Y = LABELS[dataset]
     is_multiclass = np.unique(Y['y_train']).size > 2
+    whiteboxes = all_whiteboxes[dataset]
     for model_name in tqdm(MODELS, desc="Models"):
         num_layers = MODEL_METADATAS[model_name]['num_layers']
         pooler_configs = MODEL_METADATAS[model_name]['available_poolers']
@@ -163,7 +164,7 @@ for dataset, layer_available in tqdm(DATASETS.items(), desc="Datasets"):
                     }
                     y_preds = run_whiteboxes(
                         **X, y_train=Y['y_train'], y_eval=Y['y_eval'],
-                        whiteboxes=whiteboxes[dataset],
+                        whiteboxes=whiteboxes,
                         model_name=model_name_with_seed,
                         save_path=save_whitebox_path_model, 
                         layer_postfix=f"layer{layer}"
