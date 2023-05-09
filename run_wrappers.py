@@ -3,19 +3,15 @@ The purpose of this script is to run various wrapper boxes based on pre-computed
 encodings from various sources
 """
 from typing import Dict
-from utils_copy import (
+from utils import (
     compute_metrics,
-    get_train_representations_from_file,
     get_actual_layers_to_save,
-    get_actual_poolers_to_save,
     find_majority_batched,
-    randargmax,
     mkdir_if_not_exists
 )
 from sklearn.svm import SVC
 from sklearn.svm import LinearSVC
 from sklearn.tree import DecisionTreeClassifier
-from classifiers.AgglomerativeClusteringClassifier import AgglomerativeClusteringClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from classifiers.KMeansClassifier import KMeansClassifier
 from classifiers.KMedoidsClassifier import KMedoidsClassifier
@@ -29,9 +25,6 @@ from classifiers.DecisionTreeProxyClassifier import (
     DecisionTreeProxyClassifier
 )
 from sklearn.model_selection import GridSearchCV
-from ModelForSentenceLevelRepresentation import (
-    ModelForSentenceLevelRepresentation, get_model_for_representation
-)
 from constants import (
     DATASETS,
     DATA_PATH,
@@ -59,24 +52,38 @@ import sys
 WORK_DIR = "/work/06782/ysu707/ls6/DkNN"
 sys.path.append(WORK_DIR)
 
-
 # these take several hyperparameters and honestly I do not know how to 
 # parse all of them from commandline, so I just put some I think are reasonable
 # ones for now
 whiteboxes = {
-    # 'SVM': (SVC(gamma='auto', class_weight='balanced', kernel="linear"), {}),
-    'Decision_Tree': (DecisionTreeClassifier(max_depth=3, min_samples_leaf=10), {}),
-    'KNN': (KNeighborsClassifier(n_neighbors=5, n_jobs=-1), {}),
-    # 'Decision Tree Proxy': (DecisionTreeProxyClassifier(max_depth=3), {}),
-    # 'Label Biased Hierarchical Clustering': (
-    #     LabelBiasedClusteringClassifier(max_depth=3), {}
-    # ),
-    # 'Agglomerative Hierarchical Clustering': (AgglomerativeClusteringClassifier(
-    #     max_depth=1, linkage="ward", n_clusters=3), {'n_clusters': [2, 3], 
-    #                                                  'max_depth': [1, 2, 3]}),
-    'L_Means': (KMeansClassifier(), {}),
-    'SVM': (LinearSVC(tol=1e-4, dual=False), {}),
-    # 'K-medoids': (KMedoidsClassifier(), {'n_clusters': [2, 3, 10, 20, 30]})
+    'toxigen': {
+        'SVM': (SVC(gamma='auto', class_weight='balanced', kernel="linear", random_state=42), {}),
+        'Decision_Tree': (DecisionTreeClassifier(max_depth=3, min_samples_leaf=10, random_state=42), {}),
+        'KNN': (KNeighborsClassifier(n_neighbors=5, n_jobs=-1), {}),
+        # 'Decision Tree Proxy': (DecisionTreeProxyClassifier(max_depth=3), {}),
+        # 'Label Biased Hierarchical Clustering': (
+        #     LabelBiasedClusteringClassifier(max_depth=3), {}
+        # ),
+        # 'Agglomerative Hierarchical Clustering': (AgglomerativeClusteringClassifier(
+        #     max_depth=1, linkage="ward", n_clusters=2), {'n_clusters': [2, 3], 
+        #                                                  'max_depth': [1, 2, 3]}),
+        'L_Means': (KMeansClassifier(n_clusters=2, random_state=42), {}),
+        # 'K-medoids': (KMedoidsClassifier(), {'n_clusters': [2, 3, 10, 20, 30]})
+    },
+    'esnli': {
+        'Decision_Tree': (DecisionTreeClassifier(max_depth=3, min_samples_leaf=10, random_state=42), {}),
+        'KNN': (KNeighborsClassifier(n_neighbors=5, n_jobs=-1), {}),
+        # 'Decision Tree Proxy': (DecisionTreeProxyClassifier(max_depth=3), {}),
+        # 'Label Biased Hierarchical Clustering': (
+        #     LabelBiasedClusteringClassifier(max_depth=3), {}
+        # ),
+        # 'Agglomerative Hierarchical Clustering': (AgglomerativeClusteringClassifier(
+        #     max_depth=1, linkage="ward", n_clusters=3), {'n_clusters': [2, 3], 
+        #                                                  'max_depth': [1, 2, 3]}),
+        'L_Means': (KMeansClassifier(n_clusters=3, random_state=42), {}),
+        'SVM': (LinearSVC(tol=1e-4, dual=False, random_state=42), {}),
+        # 'K-medoids': (KMedoidsClassifier(), {'n_clusters': [2, 3, 10, 20, 30]})
+    }
 }
 
 results_df = pd.DataFrame(
@@ -97,45 +104,21 @@ def save_model_metadata(
     ) as f:
         pickle.dump(clf, f)
 
-# I have wrote this function but decided this is probably not used much
-def save_knn_metadata(
-    clf, X_test, model_name, save_path, layer_postfix=""
-):
-    """Helper to save the neighbor distances and indices"""
-    
-    neigh_dist, neigh_ind = clf.kneighbors(X_test)
-    mkdir_if_not_exists(save_path)
-    np.savetxt(os.path.join(save_path, f'{model_name}_knn_neighbors_dists_{layer_postfix}.txt'), neigh_dist, delimiter=",")
-    np.savetxt(os.path.join(save_path, f'{model_name}_knn_neighbors_indices_{layer_postfix}.txt'), neigh_ind, delimiter=",")
-
 def run_whiteboxes(X_train, X_eval, X_test, y_train, y_eval, whiteboxes, **kwargs):
     """
-    This method runs all white box methods for representations retrieved from a particular layer
+    This method runs all white box methods for representations retrieved from 
+    a particular layer
     """
     preds = {}
     is_multiclass = np.unique(y_train).size > 2
     scoring = "f1" if not is_multiclass else 'accuracy'
     for name, clf_set in tqdm(whiteboxes.items()):
-        classifier, parameters = clf_set
+        clf, parameters = clf_set
         if parameters:
-            clf = GridSearchCV(classifier, parameters, n_jobs=-1, scoring=scoring)
-        else:
-            if isinstance(classifier, KMeansClassifier):
-                # manually set K-means # of clusters equal to the number of
-                # unique label classes
-                n_clusters = np.unique(y_train).size
-                clf = KMeansClassifier(n_clusters=n_clusters)
-            else:
-                clf = classifier
+            clf = GridSearchCV(clf, parameters, n_jobs=-1, scoring=scoring)
         # for whiteboxes, use both training and validation data
-        clf.fit(X_train, y_train)
+        clf.fit(np.vstack([X_train, X_eval]), np.concatenate((y_train, y_eval)))
         save_model_metadata(clf, name, **kwargs)
-        # save neighbor distanes for KNN, for now just ignore
-        # if name == 'KNN':
-        #     if parameters:
-        #         clf = KNeighborsClassifier(**clf.best_params_)
-        #         clf.fit(X_train, y_train)
-        #     save_knn_metadata(clf, X_test, **kwargs)
         y_pred = clf.predict(X_test)
         preds[name] = y_pred
     return preds
@@ -148,33 +131,27 @@ def add_to_dataframe(df, results: Dict[str, float], **kwargs):
     )
 
 # compute the white box results for the different transformers
-# knn results will be retrieved later from main results
-output_filename = sys.argv[1]
-data_path = os.path.join(
-    WORK_DIR,
-    "data/{dataset}/{model_name}/{mode}/{pooler_config}/layer_{layer}.csv"
-)
-for dataset, layer_available in tqdm(DATASETS.items()):
+for dataset, layer_available in tqdm(DATASETS.items(), desc="Datasets"):
     save_whitebox_path = os.path.join(WORK_DIR, "results", dataset)
     model_configs = MODEL_CONFIGS[dataset]
     Y = LABELS[dataset]
     is_multiclass = np.unique(Y['y_train']).size > 2
-    for model_name in tqdm(MODELS):
+    for model_name in tqdm(MODELS, desc="Models"):
         num_layers = MODEL_METADATAS[model_name]['num_layers']
         pooler_configs = MODEL_METADATAS[model_name]['available_poolers']
         layers_to_save = get_actual_layers_to_save(layer_available, num_layers)
         models = model_configs[model_name] # same model but diff seeds
-        for seed in SEEDS:
+        for seed in tqdm(SEEDS, desc="seeds"):
             model_name_with_seed = f"{model_name}-seed-{seed}"
-            for pooler_config in tqdm(pooler_configs):
+            for pooler_config in tqdm(pooler_configs, desc="Poolers"):
                 save_whitebox_path_model = os.path.join(
                     save_whitebox_path, model_name, pooler_config
                 )
                 all_y_preds = {wrapper: {} for wrapper in whiteboxes}
-                for layer in tqdm(layers_to_save):
+                for layer in tqdm(layers_to_save, desc="layers"):
                     X  = {
                         f'X_{split}': np.loadtxt(
-                            data_path.format(
+                            DATA_PATH.format(
                                 dataset=dataset,
                                 mode=split, 
                                 model_name=model_name_with_seed, 
@@ -195,7 +172,7 @@ for dataset, layer_available in tqdm(DATASETS.items()):
                         all_y_preds[wrapper][layer] = y_preds[wrapper]
                 # layer_config -> wrapper_name -> predictions_stacked
                 layer_to_wrapper_to_preds = {}
-                for layer_config in tqdm(LAYER_CONFIGS):
+                for layer_config in tqdm(LAYER_CONFIGS, desc="layer configs"):
                     # subset the predictions based on actual layers used
                     layers_to_compute = get_actual_layers_to_save(layer_config, num_layers)
                     layer_to_wrapper_to_preds[layer_config] = {}
@@ -291,7 +268,7 @@ for dataset, layer_available in tqdm(DATASETS.items()):
 #             Layers_Used=None,
 #             Poolers_Used=None
 #         )
-
+output_filename = sys.argv[1]
 results_df.to_csv(
     path_or_buf=os.path.join(WORK_DIR, output_filename), 
     index=False, index_label=False, header=True

@@ -7,15 +7,19 @@ CACHE_DIR = "/work/06782/ysu707/ls6/.cache"
 WORK_DIR = "/work/06782/ysu707/ls6/DkNN"
 sys.path.append(WORK_DIR)
 
+# SEEDS = [
+#     42, 365, 469, 4399, 3012023
+# ]
+
 SEEDS = [
-    42, 365, 469, 4399, 3012023
+    42
 ]
 
 SPLITS = ['train', 'eval', 'test']
 
 # dataset -> layers computed
 DATASETS = {
-    'toxigen': 'All',
+    'toxigen': 'Last Only',
     'esnli': 'Last Only'
 }
 
