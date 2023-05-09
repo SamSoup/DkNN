@@ -153,11 +153,11 @@ for dataset, layer_available in tqdm(DATASETS.items(), desc="Datasets"):
                         f'X_{split}': np.loadtxt(
                             DATA_PATH.format(
                                 dataset=dataset,
-                                mode=split, 
-                                model_name=model_name_with_seed, 
-                                pooler_config=pooler_config, 
+                                model=model_name_with_seed,
+                                mode=split,
+                                pooler_config=pooler_config,
                                 layer=layer
-                            ), 
+                            ),
                             delimiter=','
                         ) for split in SPLITS
                     }
