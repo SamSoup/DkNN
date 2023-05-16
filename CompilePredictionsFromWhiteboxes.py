@@ -13,8 +13,6 @@ import os
 SEEDS = list(filter(lambda x: x == 42, SEEDS))
 pooler_config = "mean_with_attention"
 
-DATASETS = ['toxigen'] # TODO: remove
-
 # load representations from datasets
 for dataset in tqdm(DATASETS, desc="datasets"):
     # initiate pandas dataframe for storage
