@@ -1,8 +1,10 @@
 """
 Main script for execution, this is the ONLY place where any processing
 of command line arguments occurs
-"""
 
+Note: before running this script, it is crucial that login through the 
+huggingface terminal to be complete
+"""
 from transformers import (
     AutoConfig,
     AutoModelForSequenceClassification,
@@ -14,31 +16,47 @@ from transformers import (
     HfArgumentParser,
     PretrainedConfig,
     TrainingArguments,
-    Trainer,
-    Seq2SeqTrainer,
     default_data_collator,
-    set_seed
+    set_seed,
 )
 from utils import randargmax
-from typing import Dict
+from typing import Dict, Tuple, List, Union
 from SaveLogitsTrainer import SaveLogitsTrainer
-from data import train_val_test_split, read_data
-from args import ComputeEncodingsArguments, DKNNArguments, DataArguments, ModelArguments
-from transformers.trainer_utils import get_last_checkpoint, denumpify_detensorize, speed_metrics
-from datasets import load_metric, Dataset, load_dataset
-from NearestNeighborLogits import LogProbabilityLogitsFactory, ConformalLogitsFactory
-from NearestNeighborDistancesToWeightsFuncts import NearestNeighborDistancesToWeightsFuncts
-from NearestNeighborFinders import KDTreeNearestNeighborFactory, LocalitySensitiveHashingNearestNeighborFactory
+from args import (
+    ComputeEncodingsArguments,
+    DKNNArguments,
+    DataArguments,
+    ModelArguments,
+)
+from transformers.trainer_utils import (
+    get_last_checkpoint,
+    denumpify_detensorize,
+)
+from datasets import Dataset, load_dataset
+from NearestNeighborLogits import (
+    LogProbabilityLogitsFactory,
+    ConformalLogitsFactory,
+)
+from NearestNeighborDistancesToWeightsFuncts import (
+    NearestNeighborDistancesToWeightsFuncts,
+)
+from NearestNeighborFinders import (
+    KDTreeNearestNeighborFactory,
+    LocalitySensitiveHashingNearestNeighborFactory,
+)
 from DeepKNearestNeighborClassifier import DeepKNearestNeighborClassifier
 from ComputeEncodings import ComputeEncodings
 from ComputeAndSaveTrainRepTrainer import ComputeAndSaveTrainRepTrainer
-from ComputeAndSaveConformalScoresTrainer import ComputeAndSaveConformalScoresTrainer
+from ComputeAndSaveConformalScoresTrainer import (
+    ComputeAndSaveConformalScoresTrainer,
+)
 from DeepKNearestNeighborTrainer import DeepKNearestNeighborTrainer
 from CustomLossTrainer import CustomLossTrainer
 from CustomSeqToSeqTrainer import CustomSeq2SeqTrainer
 from EmbeddingPooler import EmbeddingPooler
 from sklearn.metrics import DistanceMetric
 from sklearn.metrics.pairwise import cosine_distances
+import evaluate
 import numpy as np
 import torch.nn as nn
 import os
@@ -46,18 +64,23 @@ import torch
 import pprint
 import logging
 import sys
-import math
 import datasets
 import transformers
 import random
-import time
 
+os.environ["TRANSFORMERS_CACHE"] = os.path.join(os.getcwd(), ".cache")
 logger = logging.getLogger(__name__)
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+device = (
+    torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+)
 
-def detect_last_checkpoint(output_dir: str, do_train: bool, 
-                            overwrite_output_dir: bool,
-                            resume_from_checkpoint: bool) -> str:
+
+def detect_last_checkpoint(
+    output_dir: str,
+    do_train: bool,
+    overwrite_output_dir: bool,
+    resume_from_checkpoint: bool,
+) -> str:
     """
     Detect the last checkpoint for a particular model to resume training
 
@@ -79,15 +102,17 @@ def detect_last_checkpoint(output_dir: str, do_train: bool,
         last_checkpoint = get_last_checkpoint(output_dir)
         if last_checkpoint is None and len(os.listdir(output_dir)) > 0:
             raise ValueError(
-                f"Output directory ({output_dir}) already exists and is not empty. "
-                "Use --overwrite_output_dir to overcome."
+                f"Output directory ({output_dir}) already exists and is not"
+                " empty. Use --overwrite_output_dir to overcome."
             )
         elif last_checkpoint is not None and resume_from_checkpoint is None:
             logger.info(
-                f"Checkpoint detected, resuming training at {last_checkpoint}. To avoid this "
-                "behavior, change the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
+                f"Checkpoint detected, resuming training at {last_checkpoint}."
+                " To avoid this behavior, change the `--output_dir` or add"
+                " `--overwrite_output_dir` to train from scratch."
             )
     return last_checkpoint
+
 
 def set_up_logging(training_args: TrainingArguments):
     """
@@ -114,199 +139,277 @@ def set_up_logging(training_args: TrainingArguments):
 
     # Log on each process the small summary:
     logger.warning(
-        f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
-        + f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
+        f"Process rank: {training_args.local_rank}, device:"
+        f" {training_args.device}, n_gpu: {training_args.n_gpu}"
+        + f"distributed training: {bool(training_args.local_rank != -1)},"
+        f" 16-bits training: {training_args.fp16}"
     )
     logger.info(f"Training/evaluation parameters {training_args}")
+
+
+def set_seed_for_reproducability(seed: int):
+    set_seed(seed)
+    torch.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.cuda.manual_seed(seed)
+
+    # Set a fixed value for the hash seed
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    print(f"Random seed set as {seed}")
+
+
+def load_data(name: str, intToText: List[str] = None) -> Tuple[Dataset]:
+    dataset = load_dataset(
+        name, cache_dir=os.environ["TRANSFORMERS_CACHE"], use_auth_token=True
+    )
+
+    # for generation models, convert ids to actually text labels
+    if intToText is not None:
+
+        def map_ids_to_text(example):
+            example["label"] = intToText[example["label"]]
+            return example
+
+        for split in dataset:
+            dataset[split] = dataset[split].map(map_ids_to_text)
+    return dataset["train"], dataset["eval"], dataset["test"]
+
+
+def set_max_seq_length(config: AutoConfig, max_seq_length: int):
+    """
+    Max_position_embeddings may be less than the maximum sequence length
+    if so, then we randomly initialize the classification head by passing
+    ignore_mismatched_sizes = True
+
+    Args:
+        config (AutoConfig): _description_
+        max_seq_length (int): _description_
+    """
+    ignore_mismatched_sizes = False
+    for attribute in ["max_position_embeddings", "n_positions"]:
+        if hasattr(config, attribute) and config[attribute] < max_seq_length:
+            config[attribute] = max_seq_length
+            ignore_mismatched_sizes = True
+    return config, ignore_mismatched_sizes
+
+
+def load_model(
+    model_name_or_path: str,
+    config: AutoConfig,
+    model_revision: str,
+    use_auth_token: bool,
+    ignore_mismatched_sizes: bool,
+    tokenizer: AutoTokenizer,
+    freeze_base_model_params: bool,
+):
+    LM = (
+        AutoModelForSeq2SeqLM
+        if "t5" in model_name_or_path
+        else AutoModelForSequenceClassification
+    )
+    model = LM.from_pretrained(
+        pretrained_model_name_or_path=model_name_or_path,
+        from_tf=bool(".ckpt" in model_name_or_path),
+        config=config,
+        cache_dir=os.environ["TRANSFORMERS_CACHE"],
+        revision=model_revision,
+        use_auth_token=True if use_auth_token else None,
+        ignore_mismatched_sizes=ignore_mismatched_sizes,
+    )
+    model.resize_token_embeddings(len(tokenizer))
+    if freeze_base_model_params:
+        for name, param in model.named_parameters():
+            if (
+                "classification_head" not in name and "classifier" not in name
+            ):  # freeze all besides classifier layer
+                param.requires_grad = False
+
+
+def update_label_to_id(
+    model: Union[AutoModelForSeq2SeqLM, AutoModelForSequenceClassification],
+    config: AutoConfig,
+    label_list: List[Union[str, int]],
+    num_labels: int,
+):
+    # Some models have set the order of the labels to use, so ensure we do so
+    label_to_id = None
+    if (
+        model.config.label2id
+        != PretrainedConfig(num_labels=num_labels).label2id
+    ):
+        # Some have all caps in their config, some don't.
+        label_name_to_id = {
+            k.lower(): v for k, v in model.config.label2id.items()
+        }
+        if list(sorted(label_name_to_id.keys())) == list(sorted(label_list)):
+            label_to_id = {
+                i: int(label_name_to_id[label_list[i]])
+                for i in range(num_labels)
+            }
+        else:
+            logger.warning(
+                (
+                    "Your model seems to have been trained with labels, but"
+                    " they don't match the dataset: "
+                ),
+                (
+                    f"model labels: {list(sorted(label_name_to_id.keys()))},"
+                    f" dataset labels: {list(sorted(label_list))}.\nIgnoring"
+                    " the model labels as a result."
+                ),
+            )
+    if label_to_id is not None:
+        model.config.label2id = label_to_id
+        model.config.id2label = {
+            id: label for label, id in config.label2id.items()
+        }
+
+    return label_to_id
+
 
 def main():
     # See all possible arguments by passing the --help flag to this script.
     # parse the arguments
-    parser = HfArgumentParser((ComputeEncodingsArguments, DKNNArguments, DataArguments, ModelArguments, TrainingArguments))
-    if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-        # If we pass only one argument to the script and it's the path to a json file,
-        # let's parse it to get our arguments.
-        encoding_args, DKNN_args, data_args, model_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
-    else:
-        encoding_args, DKNN_args, data_args, model_args, training_args = parser.parse_args_into_dataclasses()
+    parser = HfArgumentParser(
+        (
+            ComputeEncodingsArguments,
+            DKNNArguments,
+            DataArguments,
+            ModelArguments,
+            TrainingArguments,
+        )
+    )
+    encoding_args, DKNN_args, data_args, model_args, training_args = (
+        parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        if len(sys.argv) == 2 and sys.argv[1].endswith(".json")
+        else parser.parse_args_into_dataclasses()
+    )
+    sentence1_key, sentence2_key = (
+        data_args.sentence1_key,
+        data_args.sentence2_key,
+    )
 
-    # logging
+    # set up
     set_up_logging(training_args)
-
-    # Set seed before initializing model.
-    set_seed(training_args.seed)
-    torch.manual_seed(training_args.seed)
-    random.seed(training_args.seed)
-    np.random.seed(training_args.seed)
-    torch.cuda.manual_seed(training_args.seed)
-
-    # Set a fixed value for the hash seed
-    os.environ["PYTHONHASHSEED"] = str(training_args.seed)
-    print(f"Random seed set as {training_args.seed}")
+    set_seed_for_reproducability(training_args.seed)
 
     # read in data
-    # See more about loading any type of standard or custom dataset at
-    # https://huggingface.co/docs/datasets/loading_datasets.html.
-    # split dataset into train, val, test
-    if data_args.do_train_val_test_split:
-        data = read_data(data_args.train_file)
-        train_data, eval_data, test_data = train_val_test_split(
-            data, data_args.train_data_pct,
-            data_args.eval_data_pct, data_args.test_data_pct,
-            training_args.seed
-        )
-    else:
-        train_data = read_data(data_args.train_file)
-        eval_data = read_data(data_args.validation_file)
-        test_data = read_data(data_args.test_file)
-
-    if 't5' in model_args.model_name_or_path:
-        intToText = data_args.int_to_text
-        train_data['label'] = list(map(lambda x: intToText[x], train_data['label']))
-        eval_data['label'] = list(map(lambda x: intToText[x], eval_data['label']))
-        test_data['label'] = list(map(lambda x: intToText[x], test_data['label']))
-
-    # convert data to what models expect
-    train_data = Dataset.from_pandas(train_data)
-    eval_data = Dataset.from_pandas(eval_data)
-    test_data = Dataset.from_pandas(test_data)
-
-    # NOTE: this script assumes that the training data must have all possible labels
-    # NOTE: this script also assumes a classification task
+    train_data, eval_data, test_data = (
+        load_data(data_args.dataset_name, data_args.int_to_text)
+        if model_args.is_generative
+        else load_data(data_args.dataset_name)
+    )
+    # NOTE: assume that the training data must have all label classes
+    # NOTE: assume a classification task
     label_list = train_data.unique("label")
-    label_list.sort()  # Let's sort it for determinism
+    label_list.sort()  # for determinism
     num_labels = len(label_list)
 
-    # Load pretrained model and tokenizer for training
+    # Load config, pretrained model and tokenizer
+    config_name = (
+        model_args.config_name
+        if model_args.config_name
+        else model_args.model_name_or_path,
+    )
     config = AutoConfig.from_pretrained(
-        model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+        pretrained_model_name_or_path=config_name,
         num_labels=num_labels,
-        cache_dir=model_args.cache_dir,
+        cache_dir=os.environ["TRANSFORMERS_CACHE"],
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
-    ignore_mismatched_sizes = False
-    # max_position_embeddings=512 by default, which may be less than the maximum sequence length
-    # if that's case, then we randomly initialize the classification head by passing
-    # ignore_mismatched_sizes = True
-    if 'xlnet' not in model_args.model_name_or_path and hasattr(config, 'max_position_embeddings') and config.max_position_embeddings < data_args.max_seq_length:
-        config.max_position_embeddings = data_args.max_seq_length
-        ignore_mismatched_sizes = True
-    if 'xlnet' not in model_args.model_name_or_path and hasattr(config, 'n_positions') and config.n_positions < data_args.max_seq_length:
-        config.n_positions = data_args.max_seq_length
-        ignore_mismatched_sizes = True
+    config, ignore_mismatched_sizes = set_max_seq_length(
+        config, data_args.max_seq_length
+    )
 
+    tokenizer_name = (
+        model_args.tokenizer_name
+        if model_args.tokenizer_name
+        else model_args.model_name_or_path,
+    )
     tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-        cache_dir=model_args.cache_dir,
+        pretrained_model_name_or_path=tokenizer_name,
+        cache_dir=os.environ["TRANSFORMERS_CACHE"],
         use_fast=model_args.use_fast_tokenizer,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
-    sentence1_key, sentence2_key = data_args.sentence1_key, data_args.sentence2_key
-    # if 'bart' in model_args.model_name_or_path and sentence2_key != "none":
-    #     tokenizer.sep_token = "<sep>" # because eos and sep both use </s>, use this instead
-    if 'gpt2' in model_args.model_name_or_path:
-        # GPT-2 is a text generative model which its last token embedding to 
-        # predict subsequent tokens. Therefore unlike BERT which uses its first 
-        # token embedding, in the tokenization step of input text here, 
-        # we should use the last token as below.
-        tokenizer.padding_side = "left"
-        # Define PAD Token = EOS Token = 50256
-        tokenizer.pad_token = tokenizer.eos_token
-        config.pad_token_id = config.eos_token_id
-        # tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-    if 'xlnet' in model_args.model_name_or_path or 'gpt2' in model_args.model_name_or_path:
-        training_args.dataloader_drop_last = True
-    if 't5' in model_args.model_name_or_path:
-        # need to run tokenzier on dataset
-        model = AutoModelForSeq2SeqLM.from_pretrained(
-            model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
-            config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            use_auth_token=True if model_args.use_auth_token else None,
-            ignore_mismatched_sizes=ignore_mismatched_sizes
-        )
-    else:
-        model = AutoModelForSequenceClassification.from_pretrained(
-            model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
-            config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            use_auth_token=True if model_args.use_auth_token else None,
-            ignore_mismatched_sizes=ignore_mismatched_sizes
-        )
-    model.resize_token_embeddings(len(tokenizer))
-    if model_args.freeze_base_model_params:
-        for name, param in model.named_parameters():
-            if 'classification_head' not in name and 'classifier' not in name: # freeze all besides classifier layer
-                param.requires_grad = False
+
+    model = load_model(
+        model_name_or_path=model_args.model_name_or_path,
+        config=config,
+        model_revision=model_args.model_revision,
+        use_auth_token=model_args.use_auth_token,
+        ignore_mismatched_sizes=ignore_mismatched_sizes,
+        tokenizer=tokenizer,
+        freeze_base_model_params=model_args.freeze_base_model_params,
+    )
 
     # Padding strategy
     if data_args.pad_to_max_length:
         padding = "max_length"
     else:
-        # We will pad later, dynamically at batch creation, to the max sequence length in each batch
+        # We will pad later, dynamically at batch creation,
+        # to the max sequence length in each batch (faster, less memory)
         padding = False
 
-    # Some models have set the order of the labels to use, so let's make sure we do use it.
-    label_to_id = None
-    if (model.config.label2id != PretrainedConfig(num_labels=num_labels).label2id):
-        # Some have all caps in their config, some don't.
-        label_name_to_id = {k.lower(): v for k, v in model.config.label2id.items()}
-        if list(sorted(label_name_to_id.keys())) == list(sorted(label_list)):
-            label_to_id = {i: int(label_name_to_id[label_list[i]]) for i in range(num_labels)}
-        else:
-            logger.warning(
-                "Your model seems to have been trained with labels, but they don't match the dataset: ",
-                f"model labels: {list(sorted(label_name_to_id.keys()))}, dataset labels: {list(sorted(label_list))}."
-                "\nIgnoring the model labels as a result.",
-            )
-    if label_to_id is not None:
-        model.config.label2id = label_to_id
-        model.config.id2label = {id: label for label, id in config.label2id.items()}
+    label_to_id = update_label_to_id(model, config, label_list, num_labels)
+
     # check max_seq_length compared to model defaults
     if data_args.max_seq_length > tokenizer.model_max_length:
         logger.warning(
-            f"The max_seq_length passed ({data_args.max_seq_length}) is larger than the maximum length for the"
-            f"model ({tokenizer.model_max_length}). Using max_seq_length={tokenizer.model_max_length}."
+            f"The max_seq_length passed ({data_args.max_seq_length}) is larger"
+            " than the maximum length for themodel"
+            f" ({tokenizer.model_max_length}). Using"
+            f" max_seq_length={tokenizer.model_max_length}."
         )
     max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
 
     def preprocess_function(examples):
         # Tokenize the texts - input only
         args = (
-            (examples[sentence1_key],) if sentence2_key == "none" else (examples[sentence1_key], examples[sentence2_key])
+            (examples[sentence1_key],)
+            if sentence2_key == "none"
+            else (examples[sentence1_key], examples[sentence2_key])
         )
-        result = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
+        result = tokenizer(
+            *args, padding=padding, max_length=max_seq_length, truncation=True
+        )
 
         # Map labels to IDs, if not t5
         if "label" in examples:
-            if 't5' in model_args.model_name_or_path:
-                result["label"] = tokenizer(examples["label"], 
-                                            padding=True, 
-                                            max_length=max_seq_length,
-                                            truncation=True).input_ids
-                # probably do not need to convert to -100 for loss here
-                # temp = []
-                # for l in result["label"]:
-                #     l = torch.Tensor(l)
-                #     l.masked_fill_(
-                #         l == tokenizer.pad_token_id, -100
-                #     )
-                #     temp.append(l.type(torch.LongTensor).tolist())
-                # result["label"] = temp
+            if "t5" in model_args.model_name_or_path:
+                result["label"] = tokenizer(
+                    examples["label"],
+                    padding=True,
+                    max_length=max_seq_length,
+                    truncation=True,
+                ).input_ids
             elif label_to_id is not None:
-                result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
+                result["label"] = [
+                    (label_to_id[l] if l != -1 else -1)
+                    for l in examples["label"]
+                ]
         return result
+
     with training_args.main_process_first(desc="dataset map pre-processing"):
         data_dict = {
-            "train": [training_args.do_train, data_args.max_train_samples, train_data],
-            "eval": [training_args.do_eval, data_args.max_eval_samples, eval_data],
-            "test": [training_args.do_predict, data_args.max_test_samples, test_data]
+            "train": [
+                training_args.do_train,
+                data_args.max_train_samples,
+                train_data,
+            ],
+            "eval": [
+                training_args.do_eval,
+                data_args.max_eval_samples,
+                eval_data,
+            ],
+            "test": [
+                training_args.do_predict,
+                data_args.max_test_samples,
+                test_data,
+            ],
         }
         for split in data_dict:
             # preprocess each dataset
@@ -319,45 +422,65 @@ def main():
             # truncate each dataset if specified
             do, sample_limit = data_dict[split][0], data_dict[split][1]
             if do and sample_limit is not None:
-                data_dict[split][2] = data_dict[split][2].select(range(min(len(train_data), sample_limit)))
-    
-    train_data, eval_data, test_data = data_dict['train'][2], data_dict['eval'][2], data_dict['test'][2]
-    # add a unique tag for the training examples - might be useful for retrieval later, if we should do DkNN
-    if DKNN_args.do_DKNN:
-        train_data = train_data.add_column("tag", list(range(train_data.num_rows)))
-    if data_args.save_logits or DKNN_args.output_and_save_neighbors:
-        eval_data = eval_data.add_column("tag", list(range(eval_data.num_rows)))
-        test_data = test_data.add_column("tag", list(range(test_data.num_rows)))
+                data_dict[split][2] = data_dict[split][2].select(
+                    range(min(len(train_data), sample_limit))
+                )
 
+    train_data, eval_data, test_data = (
+        data_dict["train"][2],
+        data_dict["eval"][2],
+        data_dict["test"][2],
+    )
     # Log a few random samples from the training set:
     if training_args.do_train:
         for index in random.sample(range(len(train_data)), 3):
-            logger.info(f"Sample {index} of the training set: {train_data[index]}.")
+            logger.info(
+                f"Sample {index} of the training set: {train_data[index]}."
+            )
 
     # Custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
     # predictions and label_ids field) and has to return a dictionary string to float.
     metric_descs = data_args.evaluation_metrics
-    agg = ['micro', 'macro', 'weighted']
+    agg = ["micro", "macro", "weighted"]
+
     def compute_metrics(p: EvalPrediction) -> Dict[str, float]:
         computed_scores = {}
-        preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
+        preds = (
+            p.predictions[0]
+            if isinstance(p.predictions, tuple)
+            else p.predictions
+        )
         if preds.ndim > 1:
-            preds = randargmax(preds) # break ties arbitrarily
+            preds = randargmax(preds)  # break ties arbitrarily
         # preds = np.argmax(preds, axis=1)
         # see datasets.list_metrics() for the complete list
         for metric_desc in metric_descs:
-            metric_func = load_metric(metric_desc)
+            metric_func = evaluate.load(metric_desc)
             if num_labels > 2:
                 for avg in agg:
                     if "accuracy" not in metric_desc:
-                        computed_scores[f"{avg}_{metric_desc}"] = metric_func.compute(predictions=preds, references=p.label_ids, average=avg)[metric_desc]
+                        computed_scores[
+                            f"{avg}_{metric_desc}"
+                        ] = metric_func.compute(
+                            predictions=preds,
+                            references=p.label_ids,
+                            average=avg,
+                        )[
+                            metric_desc
+                        ]
                     else:
-                        computed_scores[metric_desc]  = metric_func.compute(predictions=preds, references=p.label_ids)[metric_desc]
+                        computed_scores[metric_desc] = metric_func.compute(
+                            predictions=preds, references=p.label_ids
+                        )[metric_desc]
             else:
-                computed_scores[metric_desc] = metric_func.compute(predictions=preds, references=p.label_ids)[metric_desc]
+                computed_scores[metric_desc] = metric_func.compute(
+                    predictions=preds, references=p.label_ids
+                )[metric_desc]
         # get per-class f1 too, if we want f1
         if "f1" in metric_descs:
-            f1_scores = load_metric("f1").compute(predictions=preds, references=p.label_ids, average=None)["f1"]
+            f1_scores = evaluate.load("f1").compute(
+                predictions=preds, references=p.label_ids, average=None
+            )["f1"]
             for i, l in enumerate(data_args.int_to_text):
                 computed_scores[f"f1-{l}"] = f1_scores[i]
         return computed_scores
@@ -367,93 +490,96 @@ def main():
         labels = [label.strip() for label in labels]
         return preds, labels
 
-    generative_label_to_id = { label: i for i, label in enumerate(data_args.int_to_text) }
+    generative_label_to_id = {
+        label: i for i, label in enumerate(data_args.int_to_text)
+    }
+
     def compute_metrics_generative(eval_preds):
         preds, labels = eval_preds.predictions, eval_preds.label_ids
         decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
-        decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+        decoded_labels = tokenizer.batch_decode(
+            labels, skip_special_tokens=True
+        )
         # Some simple post-processing
-        decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
+        decoded_preds, decoded_labels = postprocess_text(
+            decoded_preds, decoded_labels
+        )
         # convert text to ids
-        decoded_preds_ids = np.array(list(map(lambda x: generative_label_to_id[x], decoded_preds)))
-        decoded_labels_ids = np.array(list(map(lambda x: generative_label_to_id[x], decoded_labels)))
-        p = EvalPrediction(predictions=decoded_preds_ids, label_ids=decoded_labels_ids)
+        decoded_preds_ids = np.array(
+            list(map(lambda x: generative_label_to_id[x], decoded_preds))
+        )
+        decoded_labels_ids = np.array(
+            list(map(lambda x: generative_label_to_id[x], decoded_labels))
+        )
+        p = EvalPrediction(
+            predictions=decoded_preds_ids, label_ids=decoded_labels_ids
+        )
         result = compute_metrics(p)
 
-        prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds]
+        prediction_lens = [
+            np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds
+        ]
         result["gen_len"] = np.mean(prediction_lens)
         result = {k: round(v, 4) for k, v in result.items()}
         return result
 
-    # Data collator will default to DataCollatorWithPadding when the tokenizer is passed to Trainer, so we change it if
-    # we already did the padding.
+    # Data collator will default to DataCollatorWithPadding when the tokenizer
+    # is passed to Trainer, so we change it if we already did the padding.
     if data_args.pad_to_max_length:
         data_collator = default_data_collator
     elif training_args.fp16:
         data_collator = DataCollatorWithPadding(tokenizer, pad_to_multiple_of=8)
     else:
         data_collator = None
-    
+
     # Additional: add early stopping callback if specified
     callbacks = None
     if data_args.do_early_stopping:
-        callbacks = [EarlyStoppingCallback(early_stopping_patience=data_args.early_stopping_patience)]
+        callbacks = [
+            EarlyStoppingCallback(
+                early_stopping_patience=data_args.early_stopping_patience
+            )
+        ]
 
     p = EmbeddingPooler()
     poolers = list(map(p.get, encoding_args.poolers_to_use))
 
     # Compute Representations
     if encoding_args.do_compute_encodings:
-        # if 't5' in model_args.model_name_or_path:
-        #     training_args.generation_max_length = config.max_length
-        #     training_args.generation_num_beams = config.num_beams
-        #     training_args.predict_with_generate = True
-        #     trainer = CustomSeq2SeqTrainer(
-        #         model=model,
-        #         args=training_args,
-        #         train_dataset=train_data if training_args.do_train else None,
-        #         eval_dataset=eval_data if training_args.do_eval else None,
-        #         tokenizer=tokenizer,
-        #         data_collator=data_collator,
-        #         callbacks=callbacks,
-        #         compute_metrics=compute_metrics_generative,
-        #         save_reps_path=encoding_args.save_eval_encodings_path,
-        #         layers_to_save=encoding_args.layers_to_save,
-        #         poolers_to_use=poolers
-        #     )
-        # else:
-            encoder = ComputeEncodings(
-                model=model,
-                args=training_args,
-                train_dataset=train_data,
-                eval_dataset=eval_data,
-                test_dataset=test_data,
-                tokenizer=tokenizer,
-                data_collator=data_collator,
-                layers_to_save=encoding_args.layers_to_save,
-                poolers=poolers,
-                save_train_encodings_path=encoding_args.save_train_encodings_path,
-                save_eval_encodings_path=encoding_args.save_eval_encodings_path,
-                save_test_encodings_path=encoding_args.save_test_encodings_path,
-            )
-            encoder.compute_and_save_encodings()
+        encoder = ComputeEncodings(
+            model=model,
+            args=training_args,
+            train_dataset=train_data,
+            eval_dataset=eval_data,
+            test_dataset=test_data,
+            tokenizer=tokenizer,
+            data_collator=data_collator,
+            layers_to_save=encoding_args.layers_to_save,
+            poolers=poolers,
+            save_train_encodings_path=encoding_args.save_train_encodings_path,
+            save_eval_encodings_path=encoding_args.save_eval_encodings_path,
+            save_test_encodings_path=encoding_args.save_test_encodings_path,
+        )
+        encoder.compute_and_save_encodings()
 
     # Initialize our Trainer
     if data_args.do_weighted_cross_entropy_loss:
-        train_class_weights = torch.tensor(data_args.weights_per_class).to(device)
+        train_class_weights = torch.tensor(data_args.weights_per_class).to(
+            device
+        )
         trainer = CustomLossTrainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_data if training_args.do_train else None,
-        eval_dataset=eval_data if training_args.do_eval else None,
-        compute_metrics=compute_metrics,
-        tokenizer=tokenizer,
-        data_collator=data_collator,
-        callbacks=callbacks,
-        save_logits=data_args.save_logits,
-        loss_fct=nn.CrossEntropyLoss(weight=train_class_weights)
-    )
-    elif 't5' in model_args.model_name_or_path:
+            model=model,
+            args=training_args,
+            train_dataset=train_data if training_args.do_train else None,
+            eval_dataset=eval_data if training_args.do_eval else None,
+            compute_metrics=compute_metrics,
+            tokenizer=tokenizer,
+            data_collator=data_collator,
+            callbacks=callbacks,
+            save_logits=data_args.save_logits,
+            loss_fct=nn.CrossEntropyLoss(weight=train_class_weights),
+        )
+    elif "t5" in model_args.model_name_or_path:
         training_args.generation_max_length = config.max_length
         training_args.generation_num_beams = config.num_beams
         training_args.predict_with_generate = True
@@ -468,7 +594,9 @@ def main():
             compute_metrics=compute_metrics_generative,
             save_reps_path=DKNN_args.save_database_path,
             layers_to_save=encoding_args.layers_to_save,
-            poolers_to_use=poolers if DKNN_args.save_database_path is not None else None
+            poolers_to_use=poolers
+            if DKNN_args.save_database_path is not None
+            else None,
         )
     else:
         trainer = SaveLogitsTrainer(
@@ -483,12 +611,18 @@ def main():
             save_logits=data_args.save_logits,
             save_reps_path=DKNN_args.save_database_path,
             layers_to_save=encoding_args.layers_to_save,
-            poolers_to_use=poolers if DKNN_args.save_database_path is not None else None
+            poolers_to_use=poolers
+            if DKNN_args.save_database_path is not None
+            else None,
         )
 
     # detect last checkpt
-    last_checkpoint = detect_last_checkpoint(training_args.output_dir, training_args.do_train, 
-                                             training_args.overwrite_output_dir, training_args.resume_from_checkpoint)
+    last_checkpoint = detect_last_checkpoint(
+        training_args.output_dir,
+        training_args.do_train,
+        training_args.overwrite_output_dir,
+        training_args.resume_from_checkpoint,
+    )
 
     # Training
     if training_args.do_train:
@@ -500,14 +634,16 @@ def main():
             checkpoint = last_checkpoint
         # TODO: hyper-parameter search
         # trainer.hyperparameter_search(
-        #     direction="maximize", 
-        #     backend="ray", 
+        #     direction="maximize",
+        #     backend="ray",
         #     n_trials=10 # number of trials
         # )
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
         metrics = train_result.metrics
         max_train_samples = (
-            data_args.max_train_samples if data_args.max_train_samples is not None else len(train_data)
+            data_args.max_train_samples
+            if data_args.max_train_samples is not None
+            else len(train_data)
         )
         metrics["train_samples"] = min(max_train_samples, len(train_data))
         trainer.save_model()  # Saves the tokenizer too
@@ -529,44 +665,56 @@ def main():
             tokenizer=tokenizer,
             train_dataset=train_data,
             layers_to_save=encoding_args.layers_to_save,
-            poolers = poolers,
+            poolers=poolers,
             read_from_database_path=DKNN_args.read_from_database_path,
             save_database_path=DKNN_args.save_database_path,
         )
-        database = saveTrainRepTrainer.compute_and_save_training_points_representations()
+        database = (
+            saveTrainRepTrainer.compute_and_save_training_points_representations()
+        )
         # create the NearestNeighborFinder
         # first, we need to obtain the distance function
         if DKNN_args.dist_metric == "minkowski":
-            dist_funct = DistanceMetric.get_metric('minkowski', p=int(DKNN_args.minkowski_power))
+            dist_funct = DistanceMetric.get_metric(
+                "minkowski", p=int(DKNN_args.minkowski_power)
+            )
         elif DKNN_args.dist_metric == "cosine":
             dist_funct = cosine_distances
         if DKNN_args.neighbor_method == "KD-Tree":
             nearestNeighborFactory = KDTreeNearestNeighborFactory(
-                K=DKNN_args.K, 
-                layers_to_save=encoding_args.layers_to_save, 
+                K=DKNN_args.K,
+                layers_to_save=encoding_args.layers_to_save,
                 database=database,
                 layer_dim=model.config.hidden_size,
                 dist_metric=dist_funct,
-                leaf_size=DKNN_args.leaf_size
+                leaf_size=DKNN_args.leaf_size,
             )
         elif DKNN_args.neighbor_method == "LSH":
-            nearestNeighborFactory = LocalitySensitiveHashingNearestNeighborFactory(
-                K=DKNN_args.K, 
-                layers_to_save=encoding_args.layers_to_save, 
-                database=database, 
-                layer_dim=model.config.hidden_size,
-                dist_metric=dist_funct,
-                num_hash_funct=DKNN_args.num_hash_funct
+            nearestNeighborFactory = (
+                LocalitySensitiveHashingNearestNeighborFactory(
+                    K=DKNN_args.K,
+                    layers_to_save=encoding_args.layers_to_save,
+                    database=database,
+                    layer_dim=model.config.hidden_size,
+                    dist_metric=dist_funct,
+                    num_hash_funct=DKNN_args.num_hash_funct,
+                )
             )
         else:
             raise ValueError("Illegal Nearest Neighbor Finder method")
-        nearestNeighborFinderFunction = nearestNeighborFactory.createNearestNeighborFunction()
+        nearestNeighborFinderFunction = (
+            nearestNeighborFactory.createNearestNeighborFunction()
+        )
 
         # specify the conversion from distances to weight method
-        dist_to_weight_fct = NearestNeighborDistancesToWeightsFuncts(DKNN_args.K)
+        dist_to_weight_fct = NearestNeighborDistancesToWeightsFuncts(
+            DKNN_args.K
+        )
         if DKNN_args.dist_to_weight_fct not in dist_to_weight_fct.name_to_fct:
             raise ValueError("Unexpected Distances to Weights Function")
-        dist_to_weight_fct = dist_to_weight_fct.get(DKNN_args.dist_to_weight_fct)
+        dist_to_weight_fct = dist_to_weight_fct.get(
+            DKNN_args.dist_to_weight_fct
+        )
 
         # create the NearestNeighborLogit Function
         if DKNN_args.prediction_method == "conformal":
@@ -579,14 +727,16 @@ def main():
                 caliberation_dataset=eval_data,
                 data_collator=data_collator,
                 layers_to_save=encoding_args.layers_to_save,
-                poolers = poolers,
+                poolers=poolers,
                 tokenizer=tokenizer,
                 nearestNeighborFunction=nearestNeighborFinderFunction,
                 dist_to_weight_fct=dist_to_weight_fct,
                 read_from_scores_path=DKNN_args.read_from_scores_path,
-                save_nonconform_scores_path=DKNN_args.save_nonconform_scores_path
+                save_nonconform_scores_path=DKNN_args.save_nonconform_scores_path,
             )
-            scores = computeAndSaveConformalScoresTrainer.compute_and_save_nonconformity_scores()
+            scores = (
+                computeAndSaveConformalScoresTrainer.compute_and_save_nonconformity_scores()
+            )
             logitsFactory = ConformalLogitsFactory(label_list, scores)
         else:
             raise ValueError("Illegal Nearest Neighbor Prediction method")
@@ -598,7 +748,7 @@ def main():
             NearestNeighborFunction=nearestNeighborFinderFunction,
             dist_to_weight_fct=dist_to_weight_fct,
             LogitsFunction=nearestNeighborLogitFunction,
-            LossFunction=torch.nn.functional.nll_loss
+            LossFunction=torch.nn.functional.nll_loss,
         )
 
         # create custom trainer that utilizes our function
@@ -611,10 +761,10 @@ def main():
             tokenizer=tokenizer,
             compute_metrics=compute_metrics,
             layers_to_save=encoding_args.layers_to_save,
-            poolers = poolers,
+            poolers=poolers,
             classifier=classifier,
             save_logits=data_args.save_logits,
-            output_and_save_neighbors=DKNN_args.output_and_save_neighbors
+            output_and_save_neighbors=DKNN_args.output_and_save_neighbors,
         )
 
     # Evaluation
@@ -622,7 +772,9 @@ def main():
         logger.info("*** Evaluate ***")
         metrics = trainer.evaluate(eval_dataset=eval_data)
         max_eval_samples = (
-            data_args.max_eval_samples if data_args.max_eval_samples is not None else len(eval_data)
+            data_args.max_eval_samples
+            if data_args.max_eval_samples is not None
+            else len(eval_data)
         )
         metrics["eval_samples"] = min(max_eval_samples, len(eval_data))
         trainer.log_metrics("eval", metrics)
@@ -631,80 +783,112 @@ def main():
     # Test set Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
-        if 't5' in model_args.model_name_or_path or 'xlnet' in model_args.model_name_or_path:
-            # metrics = trainer.evaluate(eval_dataset=test_data, 
-            #                            metric_key_prefix="predict")
-            # max_test_samples = (
-            #     data_args.max_test_samples if data_args.max_test_samples is not None else len(eval_data)
-            # )
-            # metrics["predict_samples"] = min(max_test_samples, len(test_data))
-            # trainer.log_metrics("predict", metrics)
-            # trainer.save_metrics("predict", metrics)
+        if (
+            "t5" in model_args.model_name_or_path
+            or "xlnet" in model_args.model_name_or_path
+        ):
             if data_args.compute_predict_results:
                 test_labels = test_data["label"]
             test_data = test_data.remove_columns("label")
 
             predict_results = trainer.predict(
-                test_data, metric_key_prefix="predict", 
+                test_data,
+                metric_key_prefix="predict",
                 max_length=training_args.generation_max_length,
-                num_beams=training_args.generation_num_beams
+                num_beams=training_args.generation_num_beams,
             )
             if trainer.is_world_process_zero():
                 if training_args.predict_with_generate:
                     predictions = tokenizer.batch_decode(
-                        predict_results.predictions, skip_special_tokens=True, clean_up_tokenization_spaces=True
+                        predict_results.predictions,
+                        skip_special_tokens=True,
+                        clean_up_tokenization_spaces=True,
                     )
                     predictions = [pred.strip() for pred in predictions]
-                    prediction_ids = np.array(list(map(lambda x: generative_label_to_id[x], predictions)))
-                    output_prediction_file = os.path.join(training_args.output_dir, "predict_results.txt")
-                    with open(output_prediction_file, "w", encoding="utf-8") as writer:
-                        logger.info(f"***** Writing Predict results to {output_prediction_file} *****")
+                    prediction_ids = np.array(
+                        list(
+                            map(
+                                lambda x: generative_label_to_id[x], predictions
+                            )
+                        )
+                    )
+                    output_prediction_file = os.path.join(
+                        training_args.output_dir, "predict_results.txt"
+                    )
+                    with open(
+                        output_prediction_file, "w", encoding="utf-8"
+                    ) as writer:
+                        logger.info(
+                            "***** Writing Predict results to"
+                            f" {output_prediction_file} *****"
+                        )
                         writer.write("index\tprediction\n")
                         for index, item in enumerate(prediction_ids):
                             writer.write(f"{index}\t{item}\n")
 
                     if data_args.compute_predict_results:
-                        p = EvalPrediction(predictions=predict_results.predictions, label_ids=test_labels)
+                        p = EvalPrediction(
+                            predictions=predict_results.predictions,
+                            label_ids=test_labels,
+                        )
                         predict_metrics = compute_metrics_generative(p)
-                        # To be JSON-serializable, we need to remove numpy types or zero-d tensors
+                        # To be JSON-serializable, we need to remove numpy types
+                        # or zero-d tensors
                         predict_metrics = denumpify_detensorize(predict_metrics)
                         predict_metrics.update(predict_results.metrics)
-                        predict_metrics['predict_samples'] = len(test_data)
+                        predict_metrics["predict_samples"] = len(test_data)
                         # Prefix all keys with metric_key_prefix + '_'
                         for key in list(predict_metrics.keys()):
                             if not key.startswith("predict_"):
-                                predict_metrics[f"predict_{key}"] = predict_metrics.pop(key)
+                                predict_metrics[
+                                    f"predict_{key}"
+                                ] = predict_metrics.pop(key)
                         trainer.log_metrics("predict", predict_metrics)
                         trainer.save_metrics("predict", predict_metrics)
         else:
-            # Removing the `label` columns because it contains -1 and Trainer won't like that.
+            # Removing the `label` columns because it contains -1 and Trainer
+            # won't like that.
             if data_args.compute_predict_results:
                 test_labels = test_data["label"]
             test_data = test_data.remove_columns("label")
-            prediction_output = trainer.predict(test_data, metric_key_prefix="predict")
+            prediction_output = trainer.predict(
+                test_data, metric_key_prefix="predict"
+            )
             predictions = prediction_output.predictions
-            if isinstance(predictions, tuple) and len(predictions) != test_data.num_rows:
-                # assume the first thing in the tuple is predictions, if it's multiple tensors
+            if (
+                isinstance(predictions, tuple)
+                and len(predictions) != test_data.num_rows
+            ):
+                # assume the first thing in the tuple is predictions,
+                # if it's multiple tensors
                 predictions = predictions[0]
 
-            # compute results for test set (NOTE: this assumes that the test set also has labels)
+            # compute results for test set (NOTE: this assumes that the test
+            # set also has labels)
             if data_args.compute_predict_results:
-                p = EvalPrediction(predictions=predictions, label_ids=test_labels)
+                p = EvalPrediction(
+                    predictions=predictions, label_ids=test_labels
+                )
                 predict_metrics = compute_metrics(p)
-                # To be JSON-serializable, we need to remove numpy types or zero-d tensors
+                # To be JSON-serializable, we need to remove numpy types or
+                # zero-d tensors
                 predict_metrics = denumpify_detensorize(predict_metrics)
                 predict_metrics.update(prediction_output.metrics)
-                predict_metrics['predict_samples'] = len(test_data)
+                predict_metrics["predict_samples"] = len(test_data)
                 # Prefix all keys with metric_key_prefix + '_'
                 for key in list(predict_metrics.keys()):
                     if not key.startswith("predict_"):
-                        predict_metrics[f"predict_{key}"] = predict_metrics.pop(key)
+                        predict_metrics[f"predict_{key}"] = predict_metrics.pop(
+                            key
+                        )
                 trainer.log_metrics("predict", predict_metrics)
                 trainer.save_metrics("predict", predict_metrics)
 
-            # predictions = np.argmax(predictions, axis=1) 
-            predictions = randargmax(predictions) # break ties arbitrarily
-            output_predict_file = os.path.join(training_args.output_dir, f"predict_results.txt")
+            # predictions = np.argmax(predictions, axis=1)
+            predictions = randargmax(predictions)  # break ties arbitrarily
+            output_predict_file = os.path.join(
+                training_args.output_dir, f"predict_results.txt"
+            )
             if trainer.is_world_process_zero():
                 with open(output_predict_file, "w") as writer:
                     logger.info(f"***** Predict results *****")
@@ -713,10 +897,18 @@ def main():
                         item = label_list[item]
                         writer.write(f"{index}\t{item}\n")
 
-    # finally, save the data arguments and DKNN arguments 
-    torch.save(data_args, os.path.join(training_args.output_dir, "data_args.bin"))
-    torch.save(DKNN_args, os.path.join(training_args.output_dir, "DKNN_args.bin"))
-    torch.save(encoding_args, os.path.join(training_args.output_dir, "encoding_args.bin"))
+    # finally, save the data arguments and DKNN arguments
+    torch.save(
+        data_args, os.path.join(training_args.output_dir, "data_args.bin")
+    )
+    torch.save(
+        DKNN_args, os.path.join(training_args.output_dir, "DKNN_args.bin")
+    )
+    torch.save(
+        encoding_args,
+        os.path.join(training_args.output_dir, "encoding_args.bin"),
+    )
+
 
 if __name__ == "__main__":
     main()

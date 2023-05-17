@@ -180,6 +180,11 @@ class DataArguments:
     Using `HfArgumentParser` we can turn this class into argparse arguments to be able to specify 
     them on the command line. Structure follows from run_glue.py from Transformers.
     """
+    dataset_name: str = field (
+        metadata= {
+            "help": "Name of the dataset to train/predict on"
+        }
+    )
     int_to_text: Optional[List[str]] = field (
         default_factory=list, metadata = {
             "help": "For T5 only: convert classication id to text"
@@ -332,6 +337,9 @@ class ModelArguments:
     """
     model_name_or_path: str = field(
         metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+    )
+    is_generative: Optional[bool] = field (
+        default=False, metadata={"help": "Is this model generative?"}
     )
     config_name: Optional[str] = field(
         default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
