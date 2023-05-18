@@ -16,6 +16,7 @@ from transformers import (
     EarlyStoppingCallback,
     HfArgumentParser,
     PretrainedConfig,
+    Trainer,
     TrainingArguments,
     default_data_collator,
     set_seed,
@@ -632,22 +633,32 @@ def main():
             else None,
         )
     else:
-        trainer = SaveLogitsTrainer(
+        trainer = Trainer(
             model=model,
             args=training_args,
+            ata_collator=data_collator,
             train_dataset=train_data if training_args.do_train else None,
             eval_dataset=eval_data if training_args.do_eval else None,
-            compute_metrics=compute_metrics,
             tokenizer=tokenizer,
-            data_collator=data_collator,
+            compute_metrics=compute_metrics,
             callbacks=callbacks,
-            save_logits=data_args.save_logits,
-            save_reps_path=DKNN_args.save_database_path,
-            layers_to_save=encoding_args.layers_to_save,
-            poolers_to_use=poolers
-            if DKNN_args.save_database_path is not None
-            else None,
         )
+        # trainer = SaveLogitsTrainer(
+        #     model=model,
+        #     args=training_args,
+        #     train_dataset=train_data if training_args.do_train else None,
+        #     eval_dataset=eval_data if training_args.do_eval else None,
+        #     compute_metrics=compute_metrics,
+        #     tokenizer=tokenizer,
+        #     data_collator=data_collator,
+        #     callbacks=callbacks,
+        #     save_logits=data_args.save_logits,
+        #     save_reps_path=DKNN_args.save_database_path,
+        #     layers_to_save=encoding_args.layers_to_save,
+        #     poolers_to_use=poolers
+        #     if DKNN_args.save_database_path is not None
+        #     else None,
+        # )
 
     # detect last checkpt
     last_checkpoint = detect_last_checkpoint(
