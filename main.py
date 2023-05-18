@@ -7,13 +7,13 @@ huggingface terminal to be complete
 """
 from transformers import (
     AutoConfig,
+    AutoModelForCausalLM,
     AutoModelForSequenceClassification,
     AutoModelForSeq2SeqLM,
     AutoTokenizer,
     DataCollatorWithPadding,
     EvalPrediction,
     EarlyStoppingCallback,
-    LlamaForCausalLM,
     HfArgumentParser,
     PretrainedConfig,
     TrainingArguments,
@@ -211,7 +211,7 @@ def load_model(
 ):
     # select the appropriate LM
     if "llama" in model_name_or_path:
-        LM = LlamaForCausalLM
+        LM = AutoModelForCausalLM
     elif "t5" in model_name_or_path:
         LM = AutoModelForSeq2SeqLM
     else:
