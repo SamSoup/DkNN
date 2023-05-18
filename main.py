@@ -454,6 +454,16 @@ def main():
         data_dict["eval"][2],
         data_dict["test"][2],
     )
+
+    # add tags, if needed
+    if DKNN_args.do_DKNN:
+        train_data = train_data.add_column(
+            "tag", list(range(train_data.num_rows))
+        )
+    if data_args.save_logits or DKNN_args.output_and_save_neighbors:
+        eval_data = eval_data.add_column("tag", list(range(eval_data.num_rows)))
+        test_data = test_data.add_column("tag", list(range(test_data.num_rows)))
+
     # Log a few random samples from the training set:
     if training_args.do_train:
         for index in random.sample(range(len(train_data)), 3):
