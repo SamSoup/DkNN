@@ -102,3 +102,7 @@ Three examples with premise only:
 `Jumping with purple balls is so much fun!` without hypothesis are dropped
 
 Another three dropped
+
+# Distributed
+
+python -m torch.distributed.launch --nproc_per_node=3 main.py ./trial_configurations/toxigen/llama/train.json
