@@ -315,6 +315,8 @@ def main():
     # NOTE: assume that the training data must have all label classes
     # NOTE: assume a classification task
     label_list = train_data.unique("label")
+    print(label_list, "\n\n")
+    print(eval_data["label"], "\n\n")
     label_list.sort()  # for determinism
     num_labels = len(label_list)
 
