@@ -232,6 +232,7 @@ def load_model(
                 "classification_head" not in name and "classifier" not in name
             ):  # freeze all besides classifier layer
                 param.requires_grad = False
+    return model
 
 
 def update_label_to_id(
