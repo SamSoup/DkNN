@@ -356,8 +356,6 @@ def main():
         # token embedding, in the tokenization step of input text here,
         # we should use the last token as below.
         # Similarly, for llama this is also required
-        tokenizer.padding_side = "left"
-        # Define PAD Token = EOS Token = 50256
         tokenizer.pad_token = tokenizer.eos_token
         config.pad_token_id = config.eos_token_id
 
