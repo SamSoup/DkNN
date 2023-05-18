@@ -20,7 +20,7 @@ from transformers import (
     default_data_collator,
     set_seed,
 )
-from utils import randargmax
+from utils import randargmax, parse_json
 from typing import Dict, Tuple, List, Union
 from SaveLogitsTrainer import SaveLogitsTrainer
 from args import (
@@ -292,6 +292,10 @@ def main():
         if len(sys.argv) > 2 and sys.argv[-1].endswith(".json")
         else parser.parse_args_into_dataclasses()
     )
+    # read in deepspeed args
+    if training_args.deepspeed is not None:
+        training_args.deepspeed = parse_json(training_args.deepspeed)
+        print(training_args.deepspeed)
     sentence1_key, sentence2_key = (
         data_args.sentence1_key,
         data_args.sentence2_key,
