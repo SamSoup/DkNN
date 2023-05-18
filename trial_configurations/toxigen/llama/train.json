@@ -8,7 +8,7 @@
     "evaluation_strategy": "epoch",
     "logging_steps": 10,
 	"max_train_samples": 24,
-    "save_steps": 500,
+	"save_strategy": "epoch",
     "save_total_limit": 1,
     "do_early_stopping": true,
     "early_stopping_patience": 2,
