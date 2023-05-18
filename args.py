@@ -494,10 +494,6 @@ class ModelArguments:
             )
         }
     )
-    # deepspeed: Optional[str] = field(
-    #     default=None,
-    #     metadata={"help": "Path to deepspeed json file configuration"},
-    # )
     is_generative: Optional[bool] = field(
         default=False, metadata={"help": "Is this model generative?"}
     )
