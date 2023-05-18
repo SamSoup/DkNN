@@ -636,7 +636,7 @@ def main():
         trainer = Trainer(
             model=model,
             args=training_args,
-            ata_collator=data_collator,
+            data_collator=data_collator,
             train_dataset=train_data if training_args.do_train else None,
             eval_dataset=eval_data if training_args.do_eval else None,
             tokenizer=tokenizer,
