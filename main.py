@@ -289,7 +289,7 @@ def main():
     )
     encoding_args, DKNN_args, data_args, model_args, training_args = (
         parser.parse_json_file(json_file=os.path.abspath(sys.argv[-1]))
-        if len(sys.argv) > 2 and sys.argv[-1].endswith(".json")
+        if len(sys.argv) >= 2 and sys.argv[-1].endswith(".json")
         else parser.parse_args_into_dataclasses()
     )
     # read in deepspeed args
