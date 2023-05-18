@@ -47,7 +47,7 @@ conda update libstdcxx-ng
 conda install -n DkNN ipykernel --update-deps --force-reinstall
 conda install -c huggingface transformers huggingface_hub
 conda install -c conda-forge ray-tune datasets scikit-learn
-conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+conda install pytorch-gpu torchvision torchaudio cudatoolkit -c pytorch -c nvidia -c conda-forge
 conda install -c conda-forge scikit-learn-extra
 conda install -c conda-forge future
 python -m pip install sentencepiece
@@ -61,7 +61,8 @@ python -m pip install bert_score
 python -m pip install git+https://github.com/google-research/bleurt.git
 python -m pip install sentence-transformers
 python -m pip install multipledispatch
-python -m pip install nltk gensim sacrebleu skops
+python -m pip install nltk gensim sacrebleu skops accelerate
+python -m pip install --upgrade huggingface_hub
 conda update --all
 conda install -c conda-forge umap-learn
 export PYTHONPATH="/path/to/other/projects/directory:$PYTHONPATH" or 

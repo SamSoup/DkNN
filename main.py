@@ -13,6 +13,7 @@ from transformers import (
     DataCollatorWithPadding,
     EvalPrediction,
     EarlyStoppingCallback,
+    LlamaForCausalLM,
     HfArgumentParser,
     PretrainedConfig,
     TrainingArguments,
@@ -187,10 +188,15 @@ def set_max_seq_length(config: AutoConfig, max_seq_length: int):
         max_seq_length (int): _description_
     """
     ignore_mismatched_sizes = False
-    for attribute in ["max_position_embeddings", "n_positions"]:
-        if hasattr(config, attribute) and config[attribute] < max_seq_length:
-            config[attribute] = max_seq_length
-            ignore_mismatched_sizes = True
+    if (
+        hasattr(config, "max_position_embeddings")
+        and config.max_position_embeddings < max_seq_length
+    ):
+        config.max_position_embeddings = max_seq_length
+        ignore_mismatched_sizes = True
+    if hasattr(config, "n_positions") and config.n_positions < max_seq_length:
+        config.n_positions = max_seq_length
+        ignore_mismatched_sizes = True
     return config, ignore_mismatched_sizes
 
 
@@ -203,13 +209,15 @@ def load_model(
     tokenizer: AutoTokenizer,
     freeze_base_model_params: bool,
 ):
-    LM = (
-        AutoModelForSeq2SeqLM
-        if "t5" in model_name_or_path
-        else AutoModelForSequenceClassification
-    )
+    # select the appropriate LM
+    if "llama" in model_name_or_path:
+        LM = LlamaForCausalLM
+    elif "t5" in model_name_or_path:
+        LM = AutoModelForSeq2SeqLM
+    else:
+        LM = AutoModelForSequenceClassification
     model = LM.from_pretrained(
-        pretrained_model_name_or_path=model_name_or_path,
+        model_name_or_path,
         from_tf=bool(".ckpt" in model_name_or_path),
         config=config,
         cache_dir=os.environ["TRANSFORMERS_CACHE"],
@@ -310,10 +318,10 @@ def main():
     config_name = (
         model_args.config_name
         if model_args.config_name
-        else model_args.model_name_or_path,
+        else model_args.model_name_or_path
     )
     config = AutoConfig.from_pretrained(
-        pretrained_model_name_or_path=config_name,
+        config_name,
         num_labels=num_labels,
         cache_dir=os.environ["TRANSFORMERS_CACHE"],
         revision=model_args.model_revision,
@@ -326,7 +334,7 @@ def main():
     tokenizer_name = (
         model_args.tokenizer_name
         if model_args.tokenizer_name
-        else model_args.model_name_or_path,
+        else model_args.model_name_or_path
     )
     tokenizer = AutoTokenizer.from_pretrained(
         pretrained_model_name_or_path=tokenizer_name,
