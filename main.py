@@ -315,8 +315,6 @@ def main():
     # NOTE: assume that the training data must have all label classes
     # NOTE: assume a classification task
     label_list = train_data.unique("label")
-    print(label_list, "\n\n")
-    print(eval_data["label"], "\n\n")
     label_list.sort()  # for determinism
     num_labels = len(label_list)
 
@@ -336,6 +334,7 @@ def main():
     config, ignore_mismatched_sizes = set_max_seq_length(
         config, data_args.max_seq_length
     )
+    config.output_hidden_states = False
 
     tokenizer_name = (
         model_args.tokenizer_name
