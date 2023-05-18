@@ -210,9 +210,7 @@ def load_model(
     freeze_base_model_params: bool,
 ):
     # select the appropriate LM
-    if "llama" in model_name_or_path:
-        LM = AutoModelForCausalLM
-    elif "t5" in model_name_or_path:
+    if "t5" in model_name_or_path:
         LM = AutoModelForSeq2SeqLM
     else:
         LM = AutoModelForSequenceClassification
