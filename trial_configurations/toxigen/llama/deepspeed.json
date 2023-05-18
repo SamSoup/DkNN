@@ -10,5 +10,13 @@
     "fp16": {
         "enabled": false
     },
-    "zero_optimization": true
+    "zero_optimization": {
+        "stage": 2,
+        "contiguous_gradients": true,
+        "overlap_comm": true,
+        "reduce_scatter": true,
+        "reduce_bucket_size": 5e8,
+        "allgather_bucket_size": 5e8,
+        "cpu_offload": true
+    }
 }
