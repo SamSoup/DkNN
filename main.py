@@ -343,6 +343,20 @@ def main():
         use_auth_token=True if model_args.use_auth_token else None,
     )
 
+    if (
+        "gpt2" in model_args.model_name_or_path
+        or "llama" in model_args.model_name_or_path
+    ):
+        # GPT-2 is a text generative model which its last token embedding to
+        # predict subsequent tokens. Therefore unlike BERT which uses its first
+        # token embedding, in the tokenization step of input text here,
+        # we should use the last token as below.
+        # Similarly, for llama this is also required
+        tokenizer.padding_side = "left"
+        # Define PAD Token = EOS Token = 50256
+        tokenizer.pad_token = tokenizer.eos_token
+        config.pad_token_id = config.eos_token_id
+
     model = load_model(
         model_name_or_path=model_args.model_name_or_path,
         config=config,
