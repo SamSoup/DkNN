@@ -4,7 +4,6 @@
 	"freeze_base_model_params": false,
 	"do_peft": true,
 	"max_train_samples": 100,
-	"deepspeed": "./trial_configurations/esnli/llama/deepspeed.json",
 	"evaluation_metrics": ["accuracy", "f1", "precision", "recall"],
 	"seed": 42,
 	"output_dir": "./output/esnli/llama7B-seed-42",
