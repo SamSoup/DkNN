@@ -17,7 +17,7 @@
     "do_weighted_cross_entropy_loss": false,
 	"do_train_val_test_split": false,
 	"overwrite_output_dir": true,
-	"do_train": false, 
+	"do_train": true, 
 	"do_eval": true,
 	"do_predict": true,
 	"compute_predict_results": true,
