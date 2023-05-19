@@ -7,7 +7,7 @@
 	"max_train_samples": 100,
 	"evaluation_metrics": ["accuracy", "f1", "precision", "recall"],
 	"seed": 42,
-	"output_dir": "./output/esnli/llama7B-seed-42",
+	"output_dir": "/scratch/06782/ysu707/output/esnli/llama7B-seed-42",
     "evaluation_strategy": "epoch",
     "logging_steps": 10,
 	"save_strategy": "epoch",
