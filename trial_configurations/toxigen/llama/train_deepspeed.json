@@ -25,6 +25,7 @@
 	"compute_predict_results": true,
 	"pad_to_max_length": false, 
 	"sentence1_key": "text",
+	"sentence2_key": "none",
 	"use_fast_tokenizer": false,
 	"report_to": "none",
 	"learning_rate": 1e-4,
