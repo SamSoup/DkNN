@@ -227,6 +227,7 @@ def load_model(
     model.resize_token_embeddings(len(tokenizer))
     if freeze_base_model_params:
         for name, param in model.named_parameters():
+            print(name)
             if (
                 "classification_head" not in name and "classifier" not in name
             ):  # freeze all besides classifier layer
