@@ -255,7 +255,7 @@ def load_model(
             r=16,
             lora_alpha=16,
             lora_dropout=0.1,
-            bias=None,
+            bias="none",
         )
         model = get_peft_model(model, peft_config)
         model.print_trainable_parameters()
