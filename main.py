@@ -5,6 +5,14 @@ of command line arguments occurs
 Note: before running this script, it is crucial that login through the 
 huggingface terminal to be complete
 """
+from peft import (
+    get_peft_config,
+    PeftModel,
+    PeftConfig,
+    get_peft_model,
+    LoraConfig,
+    TaskType,
+)
 from transformers import (
     AutoConfig,
     AutoModelForCausalLM,
@@ -229,7 +237,9 @@ def load_model(
         for name, param in model.named_parameters():
             print(name)
             if (
-                "classification_head" not in name and "classifier" not in name
+                "classification_head" not in name
+                and "classifier" not in name
+                and "score.weight" not in name  # llama specific linear head
             ):  # freeze all besides classifier layer
                 param.requires_grad = False
         print(
@@ -376,6 +386,18 @@ def main():
         tokenizer=tokenizer,
         freeze_base_model_params=model_args.freeze_base_model_params,
     )
+
+    if model_args.do_peft:
+        peft_config = LoraConfig(
+            task_type=TaskType.SEQ_CLS,
+            inference_mode=True,
+            r=16,
+            lora_alpha=16,
+            lora_dropout=0.1,
+            bias=None,
+        )
+        model = get_peft_model(model, peft_config)
+        model.print_trainable_parameters()
 
     # Padding strategy
     if data_args.pad_to_max_length:

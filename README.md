@@ -61,7 +61,7 @@ python -m pip install bert_score
 python -m pip install git+https://github.com/google-research/bleurt.git
 python -m pip install sentence-transformers
 python -m pip install multipledispatch
-python -m pip install nltk gensim sacrebleu skops accelerate
+python -m pip install nltk gensim sacrebleu skops accelerate peft
 python -m pip install --upgrade huggingface_hub
 conda update --all
 conda install -c conda-forge umap-learn
