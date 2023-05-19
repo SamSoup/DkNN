@@ -7,7 +7,6 @@ test*
 ProtoTEx/
 *.e*
 *.o*
-*.sbatch
 output/
 layer_*/
 data/
