@@ -486,9 +486,6 @@ class ModelArguments:
     Structure follows from run_glue.py from Transformers.
     """
 
-    do_peft: Optional[bool] = field(
-        default=False, metadata={"help": "Should we do peft"}
-    )
     model_name_or_path: str = field(
         metadata={
             "help": (
@@ -499,6 +496,9 @@ class ModelArguments:
     )
     is_generative: Optional[bool] = field(
         default=False, metadata={"help": "Is this model generative?"}
+    )
+    do_peft: Optional[bool] = field(
+        default=False, metadata={"help": "Should we do peft"}
     )
     config_name: Optional[str] = field(
         default=None,
