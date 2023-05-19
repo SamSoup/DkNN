@@ -217,6 +217,7 @@ def load_model(
     ignore_mismatched_sizes: bool,
     tokenizer: AutoTokenizer,
     freeze_base_model_params: bool,
+    do_peft: bool,
 ):
     # select the appropriate LM
     if "t5" in model_name_or_path:
@@ -247,6 +248,17 @@ def load_model(
             f" {sum(p.numel() for p in model.parameters() if p.requires_grad)} "
             "trainable parameters after additional freezing"
         )
+    if do_peft:
+        peft_config = LoraConfig(
+            task_type=TaskType.SEQ_CLS,
+            inference_mode=True,
+            r=16,
+            lora_alpha=16,
+            lora_dropout=0.1,
+            bias=None,
+        )
+        model = get_peft_model(model, peft_config)
+        model.print_trainable_parameters()
     return model
 
 
@@ -385,19 +397,8 @@ def main():
         ignore_mismatched_sizes=ignore_mismatched_sizes,
         tokenizer=tokenizer,
         freeze_base_model_params=model_args.freeze_base_model_params,
+        do_peft=model_args.do_peft,
     )
-
-    if model_args.do_peft:
-        peft_config = LoraConfig(
-            task_type=TaskType.SEQ_CLS,
-            inference_mode=True,
-            r=16,
-            lora_alpha=16,
-            lora_dropout=0.1,
-            bias=None,
-        )
-        model = get_peft_model(model, peft_config)
-        model.print_trainable_parameters()
 
     # Padding strategy
     if data_args.pad_to_max_length:
