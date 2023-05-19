@@ -3,6 +3,7 @@
 	"dataset_name": "Samsoup/esnli",
 	"freeze_base_model_params": false,
 	"do_peft": true,
+	"deepspeed": "./trial_configurations/esnli/llama/deepspeed.json",
 	"evaluation_metrics": ["accuracy", "f1", "precision", "recall"],
 	"seed": 42,
 	"output_dir": "./output/esnli/llama7B-seed-42",
