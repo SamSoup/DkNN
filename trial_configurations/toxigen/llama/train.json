@@ -1,6 +1,7 @@
 {
 	"model_name_or_path": "Samsoup/llama7B",
 	"dataset_name": "Samsoup/toxigen",
+	"freeze_base_model_params": true,
 	"evaluation_metrics": ["accuracy", "f1", "precision", "recall"],
 	"seed": 42,
 	"output_dir": "./output/toxigen/llama7B-seed-42",
@@ -30,7 +31,7 @@
 	"num_train_epochs": 10,
 	"gradient_accumulation_steps": 1,
 	"eval_accumulation_steps": 1,
-	"per_device_train_batch_size": 2,
-	"per_device_eval_batch_size": 2,
+	"per_device_train_batch_size": 16,
+	"per_device_eval_batch_size": 16,
 	"do_DKNN": false
 }

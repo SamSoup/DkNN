@@ -231,6 +231,11 @@ def load_model(
                 "classification_head" not in name and "classifier" not in name
             ):  # freeze all besides classifier layer
                 param.requires_grad = False
+        print(
+            "Model now has only"
+            f" {sum(p.numel() for p in model.parameters() if p.requires_grad)} "
+            "trainable parameters after additional freezing"
+        )
     return model
 
 
