@@ -234,6 +234,11 @@ def load_model(
         ignore_mismatched_sizes=ignore_mismatched_sizes,
     )
     model.resize_token_embeddings(len(tokenizer))
+    print(
+        "Model initiated with"
+        f" {sum(p.numel() for p in model.parameters() if p.requires_grad)} "
+        "trainable parameters after additional freezing"
+    )
     if freeze_base_model_params:
         for name, param in model.named_parameters():
             print(name)
