@@ -1,4 +1,6 @@
 {
+	"config_name": "Samsoup/llama7B",
+	"tokenizer_name": "Samsoup/llama7B",
 	"model_name_or_path": "/scratch/06782/ysu707/output/toxigen/llama-seed-42-dp-steps",
 	"dataset_name": "Samsoup/toxigen",
 	"evaluation_metrics": ["accuracy", "f1", "precision", "recall"],
