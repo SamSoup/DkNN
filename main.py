@@ -233,6 +233,8 @@ def load_model(
         use_auth_token=True if use_auth_token else None,
         ignore_mismatched_sizes=ignore_mismatched_sizes,
     )
+    print(model)
+    input()
     model.resize_token_embeddings(len(tokenizer))
     print(
         "Model initiated with"
