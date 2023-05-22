@@ -13,5 +13,4 @@
 source /work/06782/ysu707/ls6/conda/etc/profile.d/conda.sh
 conda activate DkNN
 cd /work/06782/ysu707/ls6/DkNN
-deepspeed main.py ./trial_configurations/esnli/llama/train_peft.json
-deepspeed main.py ./trial_configurations/esnli/llama/train_deepspeed.json
+deepspeed main.py ./trial_configurations/esnli/llama/train_deepspeed_steps.json
