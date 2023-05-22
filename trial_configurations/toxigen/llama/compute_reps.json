@@ -25,7 +25,7 @@
 	"per_device_eval_batch_size": 32,
 	"layers_to_save": [
 		0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 
-		20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+		20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
 	],
 	"poolers_to_use": [
 		"mean_with_attention", "mean_with_attention", "mean_with_attention", 
@@ -37,7 +37,7 @@
 		"mean_with_attention", "mean_with_attention", "mean_with_attention",
 		"mean_with_attention", "mean_with_attention", "mean_with_attention",
 		"mean_with_attention", "mean_with_attention", "mean_with_attention",
-		"mean_with_attention", "mean_with_attention"
+		"mean_with_attention", "mean_with_attention", "mean_with_attention"
 	],
 	"save_train_encodings_path": "/scratch/06782/ysu707/data/toxigen/llama/train/mean_with_attention",
     "save_eval_encodings_path": "/scratch/06782/ysu707/data/toxigen/llama/eval/mean_with_attention",
