@@ -38,7 +38,7 @@
 		"mean_with_attention", "mean_with_attention", "mean_with_attention",
 		"mean_with_attention", "mean_with_attention", "mean_with_attention",
 		"mean_with_attention", "mean_with_attention", "mean_with_attention",
-		"mean_with_attention", "mean_with_attention"
+		"mean_with_attention", "mean_with_attention", "mean_with_attention"
 	],
 	"save_train_encodings_path": "/scratch/06782/ysu707/data/toxigen/llama/train/mean_with_attention",
     "save_eval_encodings_path": "/scratch/06782/ysu707/data/toxigen/llama/eval/mean_with_attention",
