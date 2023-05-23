@@ -139,15 +139,6 @@ class ComputeEncodings:
             hidden_states = get_hidden_states(
                 self.model.config.is_encoder_decoder, outputs
             )
-            print(self.model.config.is_encoder_decoder)
-            print(type(outputs["hidden_states"]))
-            if isinstance(outputs["hidden_states"], tuple):
-                print(len(outputs["hidden_states"]))
-            else:
-                print(outputs["hidden_states"].shape)
-            print(len(hidden_states))
-            print(hidden_states[0].shape)
-            input()
             # Hidden-states of the model = the initial embedding outputs + the output of each layer
             # filter representations to what we need: (num_layers+1, batch_size, max_seq_len, embedding_dim)
             # for layer, pooler in zip(self.layers_to_save, self.poolers):
