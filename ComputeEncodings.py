@@ -139,6 +139,8 @@ class ComputeEncodings:
             hidden_states = get_hidden_states(
                 self.model.config.is_encoder_decoder, outputs
             )
+            print(self.model.config.is_encoder_decoder)
+            print(type(outputs["hidden_states"]))
             print(len(hidden_states))
             print(hidden_states[0].shape)
             # Hidden-states of the model = the initial embedding outputs + the output of each layer
