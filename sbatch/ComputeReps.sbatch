@@ -5,7 +5,7 @@
 #SBATCH -p normal
 #SBATCH -N 1
 #SBATCH -n 1
-#SBATCH -t 03:00:00
+#SBATCH -t 04:00:00
 #SBATCH --mail-user=sam.su@utexas.edu
 #SBATCH --mail-type=begin
 #SBATCH --mail-type=end
