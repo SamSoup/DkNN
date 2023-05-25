@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH -J WrapperLlamaToxigen
-#SBATCH -o WrapperLlamaToxigen.o%j
-#SBATCH -e WrapperLlamaToxigen.e%j
-#SBATCH -p normal
+#SBATCH -J ComputerRepsLlamaESNLI
+#SBATCH -o ComputerRepsLlamaESNLI.o%j
+#SBATCH -e ComputerRepsLlamaESNLI.e%j
+#SBATCH -p gpu-a100
 #SBATCH -N 1
 #SBATCH -n 1
-#SBATCH -t 04:00:00
+#SBATCH -t 12:00:00
 #SBATCH --mail-user=sam.su@utexas.edu
 #SBATCH --mail-type=begin
 #SBATCH --mail-type=end
@@ -13,4 +13,4 @@
 source /work/06782/ysu707/ls6/conda/etc/profile.d/conda.sh
 conda activate DkNN
 cd /work/06782/ysu707/ls6/DkNN
-python3 run_wrappers.py llama_results_toxigen_all.csv
+python3 main.py ./trial_configurations/esnli/llama/compute_reps.json
