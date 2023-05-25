@@ -85,7 +85,7 @@ MODEL_METADATAS = {
         ],
     },
     "llama7B": {
-        "num_layers": 33,
+        "num_layers": 32,
         "available_poolers": ["mean_with_attention"],
     },
 }
