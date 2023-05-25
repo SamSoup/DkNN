@@ -1,0 +1,5 @@
+Dataset,Model,Whitebox,Layers_Used,Poolers_Used,Seed,predict_accuracy,predict_f1,predict_precision,predict_recall
+toxigen,llama7B,SVM,Last Only,mean_with_attention,42,0.8031914893617021,0.6666666666666666,0.6826568265682657,0.6514084507042254
+toxigen,llama7B,Decision_Tree,Last Only,mean_with_attention,42,0.7659574468085106,0.5769230769230769,0.635593220338983,0.528169014084507
+toxigen,llama7B,KNN,Last Only,mean_with_attention,42,0.7691489361702127,0.6340640809443508,0.6084142394822006,0.6619718309859155
+toxigen,llama7B,L_Means,Last Only,mean_with_attention,42,0.6978723404255319,0.0,0.0,0.0

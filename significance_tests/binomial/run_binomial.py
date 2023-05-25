@@ -21,6 +21,8 @@ def create_result_df(models, metrics, whiteboxes):
         columns=pd.MultiIndex.from_product([models, metrics], names=['models', 'metrics'])
     )
 
+DATASETS = ['toxigen'] # TODO: remove
+
 for dataset in tqdm(DATASETS, desc="datasets"):
     data = load_dataset(f"Samsoup/{dataset}", use_auth_token=True)
     y_test = np.array(data['test']['label'])

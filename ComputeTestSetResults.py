@@ -10,7 +10,7 @@ import os
 SEEDS = list(filter(lambda x: x == 42, SEEDS))
 pooler_config = "mean_with_attention"
 
-DATASETS = ['esnli'] # TODO: remove
+DATASETS = ['toxigen'] # TODO: remove
 
 def create_result_df(models, metrics, classifiers):
     """

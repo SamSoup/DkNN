@@ -33,9 +33,9 @@ METRICS = ["accuracy", "precision", "recall", "f1"]
 MODELS = [
     "bart-large",
     "deberta-large",
-    "flan-t5-large"
+    "flan-t5-large",
     # "t5-large"
-    "llama7B",
+    "llama7B"
 ]
 
 WRAPPER_BOXES = ["KNN", "SVM", "Decision_Tree", "L_Means"]
