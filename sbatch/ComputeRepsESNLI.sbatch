@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH -J ComputerRepsLlamaESNLI
-#SBATCH -o ComputerRepsLlamaESNLI.o%j
-#SBATCH -e ComputerRepsLlamaESNLI.e%j
+#SBATCH -J ComputeRepsLlamaESNLI
+#SBATCH -o ComputeRepsLlamaESNLI.o%j
+#SBATCH -e ComputeRepsLlamaESNLI.e%j
 #SBATCH -p gpu-a100
 #SBATCH -N 1
 #SBATCH -n 1
