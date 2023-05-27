@@ -157,9 +157,7 @@ def add_to_dataframe(df, results: Dict[str, float], **kwargs):
 
 
 MODELS = ["llama7B"]
-DATASETS = {
-    "toxigen": ["All", "Embedding Only", "Embedding + Last", "Last Only"]
-}
+DATASETS = {"esnli": ["Last Only"]}
 # compute the white box results for the different transformers
 for dataset, layer_configs in tqdm(DATASETS.items(), desc="Datasets"):
     save_whitebox_path = os.path.join(WORK_DIR, "results", dataset)
