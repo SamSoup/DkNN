@@ -81,21 +81,21 @@ all_whiteboxes = {
         # 'K-medoids': (KMedoidsClassifier(), {'n_clusters': [2, 3, 10, 20, 30]})
     },
     "esnli": {
-        "Decision_Tree": (
-            DecisionTreeClassifier(
-                max_depth=3, min_samples_leaf=10, random_state=42
-            ),
-            {},
-        ),
-        "KNN": (KNeighborsClassifier(n_neighbors=5, n_jobs=-1), {}),
-        # 'Decision Tree Proxy': (DecisionTreeProxyClassifier(max_depth=3), {}),
-        # 'Label Biased Hierarchical Clustering': (
-        #     LabelBiasedClusteringClassifier(max_depth=3), {}
+        # "Decision_Tree": (
+        #     DecisionTreeClassifier(
+        #         max_depth=3, min_samples_leaf=10, random_state=42
+        #     ),
+        #     {},
         # ),
-        # 'Agglomerative Hierarchical Clustering': (AgglomerativeClusteringClassifier(
-        #     max_depth=1, linkage="ward", n_clusters=3), {'n_clusters': [2, 3],
-        #                                                  'max_depth': [1, 2, 3]}),
-        "L_Means": (KMeansClassifier(n_clusters=3, random_state=42), {}),
+        # "KNN": (KNeighborsClassifier(n_neighbors=5, n_jobs=-1), {}),
+        # # 'Decision Tree Proxy': (DecisionTreeProxyClassifier(max_depth=3), {}),
+        # # 'Label Biased Hierarchical Clustering': (
+        # #     LabelBiasedClusteringClassifier(max_depth=3), {}
+        # # ),
+        # # 'Agglomerative Hierarchical Clustering': (AgglomerativeClusteringClassifier(
+        # #     max_depth=1, linkage="ward", n_clusters=3), {'n_clusters': [2, 3],
+        # #                                                  'max_depth': [1, 2, 3]}),
+        # "L_Means": (KMeansClassifier(n_clusters=3, random_state=42), {}),
         "SVM": (LinearSVC(tol=1e-4, dual=False, random_state=42), {}),
         # 'K-medoids': (KMedoidsClassifier(), {'n_clusters': [2, 3, 10, 20, 30]})
     },
