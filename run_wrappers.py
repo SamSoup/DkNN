@@ -143,7 +143,12 @@ def run_whiteboxes(
         if parameters:
             clf = GridSearchCV(clf, parameters, n_jobs=-1, scoring=scoring)
         # for whiteboxes, use both training and validation data
-        clf.fit(np.vstack([X_train, X_eval]), np.concatenate((y_train, y_eval)))
+        clf.fit(
+            np.vstack(
+                [X_train.astype(np.longdouble), X_eval.astype(np.longdouble)]
+            ),
+            np.concatenate((y_train.astype(np.int32), y_eval.astype(np.int32))),
+        )
         save_model_metadata(clf, name, **kwargs)
         y_pred = clf.predict(X_test)
         preds[name] = y_pred
