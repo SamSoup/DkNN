@@ -153,7 +153,7 @@ def run_whiteboxes(
             np.vstack(
                 [X_train.astype(np.longdouble), X_eval.astype(np.longdouble)]
             ),
-            np.concatenate((y_train.astype(np.int32), y_eval.astype(np.int32))),
+            np.concatenate((y_train.astype(np.int64), y_eval.astype(np.int64))),
         )
         save_model_metadata(clf, name, **kwargs)
         y_pred = clf.predict(X_test)
