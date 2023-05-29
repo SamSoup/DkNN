@@ -9,6 +9,7 @@ from utils import (
     find_majority_batched,
     mkdir_if_not_exists,
 )
+from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from sklearn.svm import LinearSVC
 from sklearn.tree import DecisionTreeClassifier
@@ -54,15 +55,6 @@ sys.path.append(WORK_DIR)
 # ones for now
 all_whiteboxes = {
     "toxigen": {
-        "SVM": (
-            SVC(
-                gamma="auto",
-                class_weight="balanced",
-                kernel="linear",
-                random_state=42,
-            ),
-            {},
-        ),
         "Decision_Tree": (
             DecisionTreeClassifier(
                 max_depth=3, min_samples_leaf=10, random_state=42
@@ -78,6 +70,15 @@ all_whiteboxes = {
         #     max_depth=1, linkage="ward", n_clusters=2), {'n_clusters': [2, 3],
         #                                                  'max_depth': [1, 2, 3]}),
         "L_Means": (KMeansClassifier(n_clusters=2, random_state=42), {}),
+        "SVM": (
+            SVC(
+                gamma="auto",
+                class_weight="balanced",
+                kernel="linear",
+                random_state=42,
+            ),
+            {},
+        ),
         # 'K-medoids': (KMedoidsClassifier(), {'n_clusters': [2, 3, 10, 20, 30]})
     },
     "esnli": {
@@ -142,6 +143,11 @@ def run_whiteboxes(
         clf, parameters = clf_set
         if parameters:
             clf = GridSearchCV(clf, parameters, n_jobs=-1, scoring=scoring)
+        # scale data for svm (always last so does not affect other clfs)
+        if name == "SVM":
+            scaler = StandardScaler()
+            X_train = scaler.fit_transform(X_train)
+            X_eval = scaler.fit_transform(X_eval)
         # for whiteboxes, use both training and validation data
         clf.fit(
             np.vstack(
