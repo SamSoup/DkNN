@@ -97,7 +97,16 @@ all_whiteboxes = {
         # #     max_depth=1, linkage="ward", n_clusters=3), {'n_clusters': [2, 3],
         # #                                                  'max_depth': [1, 2, 3]}),
         # "L_Means": (KMeansClassifier(n_clusters=3, random_state=42), {}),
-        "SVM": (LinearSVC(tol=1e-4, dual=False, random_state=42), {}),
+        # "SVM": (LinearSVC(tol=1e-4, dual=False, random_state=42), {}),
+        "SVM": (
+            SVC(
+                gamma="auto",
+                class_weight="balanced",
+                kernel="linear",
+                random_state=42,
+            ),
+            {},
+        ),
         # 'K-medoids': (KMedoidsClassifier(), {'n_clusters': [2, 3, 10, 20, 30]})
     },
 }
