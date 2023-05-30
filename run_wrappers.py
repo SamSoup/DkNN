@@ -108,8 +108,15 @@ all_whiteboxes = {
         #     ),
         #     {},
         # ),
-        "SVM": SGDClassifier(
-            max_iter=1000, tol=1e-4, loss="hinge", random_state=42, n_jobs=-1
+        "SVM": (
+            SGDClassifier(
+                max_iter=1000,
+                tol=1e-4,
+                loss="hinge",
+                random_state=42,
+                n_jobs=-1,
+            ),
+            {},
         ),
         # 'K-medoids': (KMedoidsClassifier(), {'n_clusters': [2, 3, 10, 20, 30]})
     },
