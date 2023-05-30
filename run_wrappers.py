@@ -10,6 +10,7 @@ from utils import (
     mkdir_if_not_exists,
 )
 from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import SGDClassifier
 from sklearn.svm import SVC
 from sklearn.svm import LinearSVC
 from sklearn.tree import DecisionTreeClassifier
@@ -98,14 +99,17 @@ all_whiteboxes = {
         # #                                                  'max_depth': [1, 2, 3]}),
         # "L_Means": (KMeansClassifier(n_clusters=3, random_state=42), {}),
         # "SVM": (LinearSVC(tol=1e-4, dual=False, random_state=42), {}),
-        "SVM": (
-            SVC(
-                gamma="auto",
-                class_weight="balanced",
-                kernel="linear",
-                random_state=42,
-            ),
-            {},
+        # "SVM": (
+        #     SVC(
+        #         gamma="auto",
+        #         class_weight="balanced",
+        #         kernel="linear",
+        #         random_state=42,
+        #     ),
+        #     {},
+        # ),
+        "SVM": SGDClassifier(
+            max_iter=1000, tol=1e-4, loss="hinge", random_state=42, n_jobs=-1
         ),
         # 'K-medoids': (KMedoidsClassifier(), {'n_clusters': [2, 3, 10, 20, 30]})
     },
