@@ -23,11 +23,10 @@
 	"eval_accumulation_steps": 100,
 	"per_device_eval_batch_size": 32,
 	"layers_to_save": [
-		0, 30, 31, 32
+		0, 31, 32
 	],
 	"poolers_to_use": [
-		"mean_with_attention", "mean_with_attention", "mean_with_attention", 
-		"mean_with_attention"
+		"mean_with_attention", "mean_with_attention", "mean_with_attention"
 	],
 	"save_train_encodings_path": "/scratch/06782/ysu707/data/esnli/llama/train/mean_with_attention",
 	"save_eval_encodings_path": "/scratch/06782/ysu707/data/esnli/llama/eval/mean_with_attention",
