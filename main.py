@@ -416,6 +416,8 @@ def main():
     num_labels = len(label_list)
 
     # Load config, pretrained model and tokenizer
+    print(model_args.config_name)
+    print(model_args.model_name_or_path)
     config_name = (
         model_args.config_name
         if model_args.config_name
