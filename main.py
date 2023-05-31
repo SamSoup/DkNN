@@ -221,14 +221,14 @@ def load_llama_adapter(
     adapter_layer: int,
 ):
     model_name = "7B"  # currently only support 7B version, locally
-
-    checkpoint = torch.load(
-        llama_model_path + model_name + "/consolidated.00.pth",
-        map_location="cpu",
+    weights_path = os.path.join(
+        llama_model_path, model_name, "consolidated.00.pth"
     )
-    print(llama_model_path + model_name + "/consolidated.00.pth")
+    checkpoint = torch.load(weights_path, map_location="cpu")
+    print(f"Loading weights from {weights_path}")
 
-    with open(llama_model_path + model_name + "/params.json", "r") as f:
+    params_path = os.path.join(llama_model_path, model_name, "params.json")
+    with open(params_path, "r") as f:
         params = json.loads(f.read())
 
     model_args: ModelArgs = ModelArgs(
@@ -238,7 +238,9 @@ def load_llama_adapter(
         adapter_layer=adapter_layer,
         **params,
     )
-    tokenizer = Tokenizer(model_path=llama_model_path + "/tokenizer.model")
+    tokenizer = Tokenizer(
+        model_path=os.path.join(llama_model_path, "tokenizer.model")
+    )
 
     model_args.vocab_size = tokenizer.n_words
     torch.set_default_tensor_type(torch.cuda.HalfTensor)
@@ -433,8 +435,6 @@ def main():
     )
     config.output_hidden_states = False
 
-    print(model_args.tokenizer_name)
-    print(model_args.model_name_or_path)
     tokenizer_name = (
         model_args.tokenizer_name
         if model_args.tokenizer_name is not None
