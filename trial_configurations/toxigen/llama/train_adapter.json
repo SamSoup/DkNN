@@ -1,6 +1,7 @@
 {
 	"model_name_or_path": "/scratch/06782/ysu707/llama",
     "config_name": "Samsoup/llama7B",
+	"tokenizer_name": "Samsoup/llama7B",
 	"dataset_name": "Samsoup/toxigen",
 	"deepspeed": "./trial_configurations/toxigen/llama/deepspeed.json",
     "do_adapter": true,
