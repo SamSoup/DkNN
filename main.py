@@ -433,6 +433,8 @@ def main():
     )
     config.output_hidden_states = False
 
+    print(model_args.tokenizer_name)
+    print(model_args.model_name_or_path)
     tokenizer_name = (
         model_args.tokenizer_name
         if model_args.tokenizer_name is not None
