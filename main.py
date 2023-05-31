@@ -421,6 +421,8 @@ def main():
         if model_args.config_name
         else model_args.model_name_or_path
     )
+    print(config_name)
+    print(model_args.config_name)
     config = AutoConfig.from_pretrained(
         config_name,
         num_labels=num_labels,
