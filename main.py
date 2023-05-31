@@ -29,7 +29,7 @@ from transformers import (
     default_data_collator,
     set_seed,
 )
-from utils import randargmax, parse_json
+from utils import randargmax, parse_json, load_datasets
 from typing import Dict, Tuple, List, Union
 from SaveLogitsTrainer import SaveLogitsTrainer
 from args import (
@@ -43,7 +43,6 @@ from transformers.trainer_utils import (
     get_last_checkpoint,
     denumpify_detensorize,
 )
-from datasets import Dataset, load_dataset
 from NearestNeighborLogits import (
     LogProbabilityLogitsFactory,
     ConformalLogitsFactory,
@@ -168,23 +167,6 @@ def set_seed_for_reproducability(seed: int):
     # Set a fixed value for the hash seed
     os.environ["PYTHONHASHSEED"] = str(seed)
     print(f"Random seed set as {seed}")
-
-
-def load_data(name: str, intToText: List[str] = None) -> Tuple[Dataset]:
-    dataset = load_dataset(
-        name, cache_dir=os.environ["TRANSFORMERS_CACHE"], use_auth_token=True
-    )
-
-    # for generation models, convert ids to actually text labels
-    if intToText is not None:
-
-        def map_ids_to_text(example):
-            example["label"] = intToText[example["label"]]
-            return example
-
-        for split in dataset:
-            dataset[split] = dataset[split].map(map_ids_to_text)
-    return dataset["train"], dataset["eval"], dataset["test"]
 
 
 def set_max_seq_length(config: AutoConfig, max_seq_length: int):
@@ -407,9 +389,9 @@ def main():
 
     # read in data
     train_data, eval_data, test_data = (
-        load_data(data_args.dataset_name, data_args.int_to_text)
+        load_datasets(data_args.dataset_name, data_args.int_to_text)
         if model_args.is_generative
-        else load_data(data_args.dataset_name)
+        else load_datasets(data_args.dataset_name)
     )
     # NOTE: assume that the training data must have all label classes
     # NOTE: assume a classification task

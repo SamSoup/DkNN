@@ -1,9 +1,92 @@
-from typing import Dict
+from typing import Dict, List
 from tqdm.auto import tqdm
+from typing import Tuple
+from sklearn.model_selection import train_test_split
+from datasets import Dataset, load_dataset
 import pandas as pd
 import os, json
 import numpy as np
 import pickle
+
+
+def load_datasets(name: str, intToText: List[str] = None) -> Tuple[Dataset]:
+    dataset = load_dataset(
+        name, cache_dir=os.environ["TRANSFORMERS_CACHE"], use_auth_token=True
+    )
+
+    # for generation models, convert ids to actually text labels
+    if intToText is not None:
+
+        def map_ids_to_text(example):
+            example["label"] = intToText[example["label"]]
+            return example
+
+        for split in dataset:
+            dataset[split] = dataset[split].map(map_ids_to_text)
+    return dataset["train"], dataset["eval"], dataset["test"]
+
+
+def train_val_test_split(
+    data: pd.DataFrame,
+    train_pct: float,
+    eval_pct: float,
+    test_pct: float,
+    seed: int,
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """
+    Here we perform train-validation-test split by calling the `train_test_split`
+    function from scikit-learn twice. Data is stratified to maintain class
+    distribution.
+
+    Args:
+        data_file (str): a path to the entire dataset, note that the labels (y) column
+                         must be named `label`
+        train_pct (float): % of data to keep for the training set
+        eval_pct (float): % of data to keep for the validation set
+        test_pct (float): % of data to keep for the test set
+        seed (int): the seed for random shuffling of the dataFrame, for reproducibility
+
+    Returns:
+        Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: the train, eval, and test split
+    """
+
+    eval_and_test_pct = eval_pct + test_pct
+    data_train, data_eval_and_test = train_test_split(
+        data,
+        train_size=train_pct,
+        random_state=seed,
+        shuffle=True,
+        stratify=data["label"],
+    )
+    data_eval, data_test = train_test_split(
+        data_eval_and_test,
+        test_size=test_pct / eval_and_test_pct,
+        random_state=seed,
+        shuffle=True,
+        stratify=data_eval_and_test["label"],
+    )
+
+    return data_train, data_eval, data_test
+
+
+def read_json_or_df(file: str) -> pd.DataFrame:
+    """
+    Read the data specified by `file` as a pandas Dataframe
+
+    Args:
+        file (str): a path to the dataset, ending in ".csv" or ".json"
+
+    Returns:
+        pd.DataFrame: the data in tabular format
+    """
+
+    if file.endswith(".json"):
+        data = pd.read_json(file)
+    else:
+        # let pandas auto detect the input separator
+        data = pd.read_csv(file, sep=None, engine="python")
+
+    return data
 
 
 def mkdir_if_not_exists(dirpath: str):
