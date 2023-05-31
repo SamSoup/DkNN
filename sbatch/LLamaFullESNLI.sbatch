@@ -14,6 +14,6 @@ source /work/06782/ysu707/ls6/conda/etc/profile.d/conda.sh
 conda activate DkNN
 cd /work/06782/ysu707/ls6/DkNN
 python3 main.py ./trial_configurations/esnli/llama/compute_reps.json
-python3 run_wrappers.py llama_esnli_results.py
+python3 run_wrappers.py llama_esnli_results.csv
 python3 compile_predictions_from_whiteboxes.py
 python3 compute_test_set_results.py

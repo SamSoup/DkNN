@@ -35,7 +35,7 @@ MODELS = [
     "deberta-large",
     "flan-t5-large",
     # "t5-large"
-    "llama7B"
+    "llama7B",
 ]
 
 WRAPPER_BOXES = ["KNN", "SVM", "Decision_Tree", "L_Means"]
@@ -85,7 +85,7 @@ MODEL_METADATAS = {
         ],
     },
     "llama7B": {
-        "num_layers": 32,
+        "num_layers": 33,
         "available_poolers": ["mean_with_attention"],
     },
 }
