@@ -416,15 +416,11 @@ def main():
     num_labels = len(label_list)
 
     # Load config, pretrained model and tokenizer
-    print(model_args.config_name)
-    print(model_args.model_name_or_path)
     config_name = (
         model_args.config_name
-        if model_args.config_name
+        if model_args.config_name is not None
         else model_args.model_name_or_path
     )
-    print(config_name)
-    print(model_args.config_name)
     config = AutoConfig.from_pretrained(
         config_name,
         num_labels=num_labels,
@@ -439,7 +435,7 @@ def main():
 
     tokenizer_name = (
         model_args.tokenizer_name
-        if model_args.tokenizer_name
+        if model_args.tokenizer_name is not None
         else model_args.model_name_or_path
     )
     tokenizer = AutoTokenizer.from_pretrained(
