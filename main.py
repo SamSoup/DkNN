@@ -36,6 +36,7 @@ from args import (
     ComputeEncodingsArguments,
     DKNNArguments,
     DataArguments,
+    LLaMaAdapterArgs,
     ModelArguments,
 )
 from transformers.trainer_utils import (
@@ -209,49 +210,57 @@ def set_max_seq_length(config: AutoConfig, max_seq_length: int):
     return config, ignore_mismatched_sizes
 
 
-# def load_llama_adapter():
-#     llama_model_path = args.llama_model_path
-#     model_name = "7B"
+from llama import ModelArgs, Tokenizer, Transformer
+import json
 
-#     checkpoint = torch.load(
-#         llama_model_path + model_name + "/consolidated.00.pth",
-#         map_location="cpu",
-#     )
-#     print(llama_model_path + model_name + "/consolidated.00.pth")
 
-#     with open(llama_model_path + model_name + "/params.json", "r") as f:
-#         params = json.loads(f.read())
+def load_llama_adapter(
+    llama_model_path: str,
+    max_seq_len: str,
+    adapter_len: int,
+    adapter_layer: int,
+):
+    model_name = "7B"  # currently only support 7B version, locally
 
-#     model_args: ModelArgs = ModelArgs(
-#         max_seq_len=args.max_seq_len,
-#         max_batch_size=32,
-#         adapter_len=args.adapter_len,
-#         adapter_layer=args.adapter_layer,
-#         **params,
-#     )
-#     tokenizer = Tokenizer(model_path=llama_model_path + "/tokenizer.model")
+    checkpoint = torch.load(
+        llama_model_path + model_name + "/consolidated.00.pth",
+        map_location="cpu",
+    )
+    print(llama_model_path + model_name + "/consolidated.00.pth")
 
-#     model_args.vocab_size = tokenizer.n_words
-#     torch.set_default_tensor_type(torch.cuda.HalfTensor)
-#     model_llama_adapter = Transformer(model_args)
-#     torch.set_default_tensor_type(torch.FloatTensor)
-#     model_llama_adapter.load_state_dict(checkpoint, strict=False)
+    with open(llama_model_path + model_name + "/params.json", "r") as f:
+        params = json.loads(f.read())
 
-#     for name, param in model_llama_adapter.named_parameters():
-#         if "adapter" not in name:
-#             param.requires_grad = False
-#         else:
-#             param.requires_grad = True
-#             param.data = param.data.float()
+    model_args: ModelArgs = ModelArgs(
+        max_seq_len=max_seq_len,
+        max_batch_size=32,
+        adapter_len=adapter_len,
+        adapter_layer=adapter_layer,
+        **params,
+    )
+    tokenizer = Tokenizer(model_path=llama_model_path + "/tokenizer.model")
 
-#     for name, param in model_llama_adapter.layers[
-#         -1 * args.adapter_layer :
-#     ].named_parameters():
-#         if "gate" in name or "adapter" in name:
-#             param.data = param.data.float()
-#             param.requires_grad = True
+    model_args.vocab_size = tokenizer.n_words
+    torch.set_default_tensor_type(torch.cuda.HalfTensor)
+    model_llama_adapter = Transformer(model_args)
+    torch.set_default_tensor_type(torch.FloatTensor)
+    model_llama_adapter.load_state_dict(checkpoint, strict=False)
 
-#     return model_llama_adapter
+    for name, param in model_llama_adapter.named_parameters():
+        if "adapter" not in name:
+            param.requires_grad = False
+        else:
+            param.requires_grad = True
+            param.data = param.data.float()
+
+    for name, param in model_llama_adapter.layers[
+        -1 * adapter_layer :
+    ].named_parameters():
+        if "gate" in name or "adapter" in name:
+            param.data = param.data.float()
+            param.requires_grad = True
+
+    return model_llama_adapter
 
 
 def load_model(
@@ -364,11 +373,19 @@ def main():
             ComputeEncodingsArguments,
             DKNNArguments,
             DataArguments,
+            LLaMaAdapterArgs,
             ModelArguments,
             TrainingArguments,
         )
     )
-    encoding_args, DKNN_args, data_args, model_args, training_args = (
+    (
+        encoding_args,
+        DKNN_args,
+        data_args,
+        llama_args,
+        model_args,
+        training_args,
+    ) = (
         parser.parse_json_file(json_file=os.path.abspath(sys.argv[-1]))
         if len(sys.argv) >= 2 and sys.argv[-1].endswith(".json")
         else parser.parse_args_into_dataclasses()
@@ -441,16 +458,24 @@ def main():
         tokenizer.pad_token = tokenizer.eos_token
         config.pad_token_id = config.eos_token_id
 
-    model = load_model(
-        model_name_or_path=model_args.model_name_or_path,
-        config=config,
-        model_revision=model_args.model_revision,
-        use_auth_token=model_args.use_auth_token,
-        ignore_mismatched_sizes=ignore_mismatched_sizes,
-        tokenizer=tokenizer,
-        freeze_base_model_params=model_args.freeze_base_model_params,
-        do_peft=model_args.do_peft,
-    )
+    if llama_args.do_adapter:
+        model = load_llama_adapter(
+            llama_model_path=model_args.model_name_or_path,
+            max_seq_len=data_args.max_seq_length,
+            adapter_len=llama_args.adapter_len,
+            adapter_layer=llama_args.adapter_layer,
+        )
+    else:
+        model = load_model(
+            model_name_or_path=model_args.model_name_or_path,
+            config=config,
+            model_revision=model_args.model_revision,
+            use_auth_token=model_args.use_auth_token,
+            ignore_mismatched_sizes=ignore_mismatched_sizes,
+            tokenizer=tokenizer,
+            freeze_base_model_params=model_args.freeze_base_model_params,
+            do_peft=model_args.do_peft,
+        )
 
     # Padding strategy
     if data_args.pad_to_max_length:
