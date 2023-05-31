@@ -5,7 +5,7 @@
 #SBATCH -p normal
 #SBATCH -N 1
 #SBATCH -n 1
-#SBATCH -t 12:00:00
+#SBATCH -t 2:00:00
 #SBATCH --mail-user=sam.su@utexas.edu
 #SBATCH --mail-type=begin
 #SBATCH --mail-type=end
@@ -13,4 +13,6 @@
 source /work/06782/ysu707/ls6/conda/etc/profile.d/conda.sh
 conda activate DkNN
 cd /work/06782/ysu707/ls6/DkNN
-python3 run_wrappers.py esnli_results.csv
+python3 run_wrappers.py llama_esnli_results.csv
+python3 compile_predictions_from_whiteboxes.py
+python3 compute_test_set_results.py
