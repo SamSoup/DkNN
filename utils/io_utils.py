@@ -32,7 +32,7 @@ def combine_cls_categories(categories: List[str]):
 def load_datasets(
     name: str, input_key: str, intToText: List[str] = None
 ) -> Tuple[Dataset]:
-    dataset = load_dataset(
+    datasets = load_dataset(
         name, cache_dir=os.environ["TRANSFORMERS_CACHE"], use_auth_token=True
     )
 
@@ -44,32 +44,33 @@ def load_datasets(
             example["label"] = intToText[example["label"]]
             return example
 
-        for split in dataset:
-            dataset[split] = dataset[split].map(map_ids_to_text)
+        for split in datasets:
+            dataset = datasets[split]
+            datasets[split] = dataset.map(map_ids_to_text)
 
             examples, prompts = [], []
             for index in range(len(dataset)):
                 if "nli" in name:
-                    premise = dataset[split]["premise"][index]
-                    hypothesis = dataset[split]["hypothesis"][index]
-                    label = dataset[split]["label"][index]
+                    premise = dataset["premise"][index]
+                    hypothesis = dataset["hypothesis"][index]
+                    label = dataset["label"][index]
                     prompt = PROMPT_DICT["prompt_nli"].format(
                         premise=premise, hypothesis=hypothesis
                     )
                 else:
-                    text = dataset[split][input_key][index]
-                    label = dataset[split]["label"][index]
+                    text = dataset[input_key][index]
+                    label = dataset["label"][index]
                     prompt = PROMPT_DICT["prompt_cls"].format(
                         categories=intToText, text=text
                     )
                 example = prompt + label
                 prompts.append(prompt)
                 examples.append(example)
-            dataset[split] = dataset[split].add_column(
+            datasets[split] = datasets[split].add_column(
                 "prompt_with_label", examples
             )
-            dataset[split] = dataset[split].add_column("prompt_only", prompts)
-    return dataset["train"], dataset["eval"], dataset["test"]
+            datasets[split] = datasets[split].add_column("prompt_only", prompts)
+    return datasets["train"], datasets["eval"], datasets["test"]
 
 
 def train_val_test_split(
