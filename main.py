@@ -454,18 +454,16 @@ def main():
             max_length=max_seq_length,
             truncation=True,
         )
-        print(prompt_only)
-        print(full_example)
-        print(prompt_only.input_ids.shape)
-        print(full_example.input_ids.shape)
-        labels = copy.deepcopy(full_example.input_ids)
-        labels[: len(prompt_only.input_ids)] = -1
-        example_mask = full_example.input_ids.ge(0)
-        label_mask = labels.ge(0)
-        full_example.input_ids[~example_mask] = 0
-        labels[~label_mask] = 0
+        labels = []
+        for p, ex in zip(prompt_only.input_ids, full_example.input_ids):
+            label = copy.deepcopy(ex)
+            label[: len(p)] = -100  # let CE ignore prompt portion of input
+            # example_mask = ex.input_ids.ge(tokenizer.pad_token_id)
+            # label_mask = label.ge(tokenizer.pad_token_id)
+            # ex[~example_mask] = tokenizer.pad_token_id
+            # labels[~label_mask] = tokenizer.pad_token_id
+            labels.append(label)
         full_example["label"] = labels
-        input()
         return full_example
 
     with training_args.main_process_first(desc="dataset map pre-processing"):
