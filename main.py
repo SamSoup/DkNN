@@ -303,7 +303,6 @@ def main():
             ComputeEncodingsArguments,
             DKNNArguments,
             DataArguments,
-            LLaMaAdapterArgs,
             ModelArguments,
             TrainingArguments,
         )
@@ -312,7 +311,6 @@ def main():
         encoding_args,
         DKNN_args,
         data_args,
-        llama_args,
         model_args,
         training_args,
     ) = (
