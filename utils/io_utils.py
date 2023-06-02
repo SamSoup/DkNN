@@ -45,7 +45,7 @@ def load_datasets(
             return example
 
         for split in datasets:
-            datasets[split] = dataset.map(map_ids_to_text)
+            datasets[split] = datasets[split].map(map_ids_to_text)
             dataset = datasets[split]
 
             examples, prompts = [], []
