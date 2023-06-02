@@ -396,6 +396,7 @@ def main():
         # Similarly, for llama this is also required
         tokenizer.pad_token = tokenizer.eos_token
         config.pad_token_id = config.eos_token_id
+        tokenizer.padding_side = "left"  # decoder only
 
     model = load_model(
         model_name_or_path=model_args.model_name_or_path,
@@ -449,14 +450,12 @@ def main():
         prompt_only = tokenizer(
             examples["prompt_only"],
             padding=padding,
-            padding_side="right" if config.is_encoder_decoder else "left",
             max_length=max_seq_length,
             truncation=True,
         )
         full_example = tokenizer(
             examples["prompt_with_label"],
             padding=padding,
-            padding_side="right" if config.is_encoder_decoder else "left",
             max_length=max_seq_length,
             truncation=True,
         )
@@ -682,7 +681,7 @@ def main():
         training_args.generation_config = GenerationConfig.from_pretrained(
             model_args.model_name_or_path
         )
-        training_args.generation_config.max_length = data_args.max_seq_len
+        training_args.generation_config.max_length = data_args.max_seq_length
         trainer = Seq2SeqTrainer(
             model=model,
             args=training_args,
