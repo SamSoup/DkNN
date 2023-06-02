@@ -647,6 +647,7 @@ def main():
         training_args.generation_max_length = config.max_length
         training_args.generation_num_beams = config.num_beams
         training_args.predict_with_generate = True
+        training_args.generation_config = model_args.model_name_or_path
         trainer = Seq2SeqTrainer(
             model=model,
             args=training_args,
