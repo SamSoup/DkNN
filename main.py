@@ -22,6 +22,7 @@ from transformers import (
     DataCollatorWithPadding,
     EvalPrediction,
     EarlyStoppingCallback,
+    GenerationConfig,
     HfArgumentParser,
     LlamaForCausalLM,
     PretrainedConfig,
@@ -448,12 +449,14 @@ def main():
         prompt_only = tokenizer(
             examples["prompt_only"],
             padding=padding,
+            padding_side="right" if config.is_encoder_decoder else "left",
             max_length=max_seq_length,
             truncation=True,
         )
         full_example = tokenizer(
             examples["prompt_with_label"],
             padding=padding,
+            padding_side="right" if config.is_encoder_decoder else "left",
             max_length=max_seq_length,
             truncation=True,
         )
@@ -676,7 +679,10 @@ def main():
         training_args.generation_max_length = config.max_length
         training_args.generation_num_beams = config.num_beams
         training_args.predict_with_generate = True
-        training_args.generation_config = model_args.model_name_or_path
+        training_args.generation_config = GenerationConfig.from_pretrained(
+            model_args.model_name_or_path
+        )
+        training_args.generation_config.max_new_tokens = 10
         trainer = Seq2SeqTrainer(
             model=model,
             args=training_args,
