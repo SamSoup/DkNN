@@ -456,10 +456,8 @@ def main():
         )
         labels = []
         for p, ex in zip(prompt_only.input_ids, full_example.input_ids):
-            print(p, ex)
-            label = copy.deepcopy(ex)
-            print(label)
-            label[: len(p)] = -100  # let CE ignore prompt portion of input
+            label = copy.deepcopy(ex)  # list
+            label[: len(p)] = [-100] * len(p)  # ignore prompt portion of input
             # example_mask = ex.input_ids.ge(tokenizer.pad_token_id)
             # label_mask = label.ge(tokenizer.pad_token_id)
             # ex[~example_mask] = tokenizer.pad_token_id
