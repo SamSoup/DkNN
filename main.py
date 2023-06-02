@@ -463,7 +463,7 @@ def main():
             # ex[~example_mask] = tokenizer.pad_token_id
             # labels[~label_mask] = tokenizer.pad_token_id
             labels.append(label)
-        full_example["label"] = labels
+        full_example["label_ids"] = labels
         return full_example
 
     with training_args.main_process_first(desc="dataset map pre-processing"):
