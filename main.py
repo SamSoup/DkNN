@@ -349,6 +349,9 @@ def main():
     label_list = train_data.unique("label")
     label_list.sort()  # for determinism
     num_labels = len(label_list)
+    train_labels = train_data["label"]
+    eval_labels = eval_data["label"]
+    test_labels = test_data["label"]
 
     # Load config, pretrained model and tokenizer
     config_name = (
@@ -494,6 +497,11 @@ def main():
                 load_from_cache_file=not data_args.overwrite_cache,
                 desc=f"Running tokenizer on {split} dataset",
             )
+            # after processing, remove the original labels if gen
+            if model_args.do_generation:
+                data_dict[split][2] = data_dict[split][2].remove_columns(
+                    ["label"]
+                )
             # truncate each dataset if specified
             do, sample_limit = data_dict[split][0], data_dict[split][1]
             if do and sample_limit is not None:
@@ -891,8 +899,6 @@ def main():
         logger.info("*** Predict ***")
         # Removing the `label` columns because it contains -1 and Trainer
         # won't like that.
-        if data_args.compute_predict_results:
-            test_labels = test_data["label"]
         test_data = test_data.remove_columns("label")
 
         if model_args.do_generation:
