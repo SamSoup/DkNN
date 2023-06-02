@@ -675,7 +675,7 @@ def main():
             loss_fct=nn.CrossEntropyLoss(weight=train_class_weights),
         )
     elif model_args.do_generation:
-        training_args.generation_max_length = config.max_length
+        training_args.generation_max_length = data_args.max_seq_length
         training_args.generation_num_beams = config.num_beams
         training_args.predict_with_generate = True
         training_args.generation_config = GenerationConfig.from_pretrained(
