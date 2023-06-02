@@ -682,7 +682,7 @@ def main():
         training_args.generation_config = GenerationConfig.from_pretrained(
             model_args.model_name_or_path
         )
-        training_args.generation_config.max_new_tokens = 10
+        training_args.generation_config.max_length = data_args.max_seq_len
         trainer = Seq2SeqTrainer(
             model=model,
             args=training_args,
