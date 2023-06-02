@@ -11,20 +11,6 @@ import os
 
 
 @dataclass
-class LLaMaAdapterArgs:
-    do_adapter: Optional[bool] = field(
-        default=False,
-        metadata={"help": "Should finetune using LLaMA adapters?"},
-    )
-    adapter_len: Optional[int] = field(
-        default=10, metadata={"help": "the adapter length"}
-    )
-    adapter_layer: Optional[int] = field(
-        default=30, metadata={"help": "the number of adapter layer"}
-    )
-
-
-@dataclass
 class ComputeEncodingsArguments:
     do_compute_encodings: Optional[bool] = field(
         default=False, metadata={"help": "Should compute representation?"}
@@ -508,8 +494,9 @@ class ModelArguments:
             )
         }
     )
-    is_generative: Optional[bool] = field(
-        default=False, metadata={"help": "Is this model generative?"}
+    do_generation: Optional[bool] = field(
+        default=False,
+        metadata={"help": "Should we do generation or classification?"},
     )
     do_peft: Optional[bool] = field(
         default=False, metadata={"help": "Should we do peft"}

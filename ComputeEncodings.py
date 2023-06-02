@@ -118,7 +118,7 @@ class ComputeEncodings:
             # drop label to avoid risk of data leak
             attention_mask = inputs.get("attention_mask", None).detach().cpu()
             with torch.no_grad():
-                if "t5" in self.args.output_dir:
+                if self.args.do_generation:
                     del inputs["labels"]
                     outputs = self.model.generate(
                         **inputs,

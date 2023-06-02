@@ -24,6 +24,7 @@ from transformers import (
     EarlyStoppingCallback,
     HfArgumentParser,
     PretrainedConfig,
+    Seq2SeqTrainer,
     Trainer,
     TrainingArguments,
     default_data_collator,
@@ -192,63 +193,9 @@ def set_max_seq_length(config: AutoConfig, max_seq_length: int):
     return config, ignore_mismatched_sizes
 
 
-from llama import ModelArgs, Tokenizer, Transformer
-import json
-
-
-def load_llama_adapter(
-    llama_model_path: str,
-    max_seq_len: str,
-    adapter_len: int,
-    adapter_layer: int,
-):
-    model_name = "7B"  # currently only support 7B version, locally
-    weights_path = os.path.join(
-        llama_model_path, model_name, "consolidated.00.pth"
-    )
-    checkpoint = torch.load(weights_path, map_location="cpu")
-    print(f"Loading weights from {weights_path}")
-
-    params_path = os.path.join(llama_model_path, model_name, "params.json")
-    with open(params_path, "r") as f:
-        params = json.loads(f.read())
-
-    model_args: ModelArgs = ModelArgs(
-        max_seq_len=max_seq_len,
-        max_batch_size=32,
-        adapter_len=adapter_len,
-        adapter_layer=adapter_layer,
-        **params,
-    )
-    tokenizer = Tokenizer(
-        model_path=os.path.join(llama_model_path, "tokenizer.model")
-    )
-
-    model_args.vocab_size = tokenizer.n_words
-    torch.set_default_tensor_type(torch.cuda.HalfTensor)
-    model_llama_adapter = Transformer(model_args)
-    torch.set_default_tensor_type(torch.FloatTensor)
-    model_llama_adapter.load_state_dict(checkpoint, strict=False)
-
-    for name, param in model_llama_adapter.named_parameters():
-        if "adapter" not in name:
-            param.requires_grad = False
-        else:
-            param.requires_grad = True
-            param.data = param.data.float()
-
-    for name, param in model_llama_adapter.layers[
-        -1 * adapter_layer :
-    ].named_parameters():
-        if "gate" in name or "adapter" in name:
-            param.data = param.data.float()
-            param.requires_grad = True
-
-    return model_llama_adapter
-
-
 def load_model(
     model_name_or_path: str,
+    do_generation: bool,
     config: AutoConfig,
     model_revision: str,
     use_auth_token: bool,
@@ -258,12 +205,11 @@ def load_model(
     do_peft: bool,
 ):
     # select the appropriate LM
-    if "t5" in model_name_or_path:
-        LM = AutoModelForSeq2SeqLM
-    else:
-        LM = AutoModelForSequenceClassification
-    # TODO: llama adapters
-    #     model = models_llama_adapter.__dict__[args.model](args)
+    LM = (
+        AutoModelForSeq2SeqLM
+        if do_generation
+        else AutoModelForSequenceClassification
+    )
     model = LM.from_pretrained(
         model_name_or_path,
         from_tf=bool(".ckpt" in model_name_or_path),
@@ -390,7 +336,7 @@ def main():
     # read in data
     train_data, eval_data, test_data = (
         load_datasets(data_args.dataset_name, data_args.int_to_text)
-        if model_args.is_generative
+        if model_args.do_generation
         else load_datasets(data_args.dataset_name)
     )
     # NOTE: assume that the training data must have all label classes
@@ -442,24 +388,17 @@ def main():
         tokenizer.pad_token = tokenizer.eos_token
         config.pad_token_id = config.eos_token_id
 
-    if llama_args.do_adapter:
-        model = load_llama_adapter(
-            llama_model_path=model_args.model_name_or_path,
-            max_seq_len=data_args.max_seq_length,
-            adapter_len=llama_args.adapter_len,
-            adapter_layer=llama_args.adapter_layer,
-        )
-    else:
-        model = load_model(
-            model_name_or_path=model_args.model_name_or_path,
-            config=config,
-            model_revision=model_args.model_revision,
-            use_auth_token=model_args.use_auth_token,
-            ignore_mismatched_sizes=ignore_mismatched_sizes,
-            tokenizer=tokenizer,
-            freeze_base_model_params=model_args.freeze_base_model_params,
-            do_peft=model_args.do_peft,
-        )
+    model = load_model(
+        model_name_or_path=model_args.model_name_or_path,
+        do_generation=model_args.do_generation,
+        config=config,
+        model_revision=model_args.model_revision,
+        use_auth_token=model_args.use_auth_token,
+        ignore_mismatched_sizes=ignore_mismatched_sizes,
+        tokenizer=tokenizer,
+        freeze_base_model_params=model_args.freeze_base_model_params,
+        do_peft=model_args.do_peft,
+    )
 
     # Padding strategy
     if data_args.pad_to_max_length:
@@ -492,9 +431,9 @@ def main():
             *args, padding=padding, max_length=max_seq_length, truncation=True
         )
 
-        # Map labels to IDs, if not t5
+        # Map labels to IDs, if generative
         if "label" in examples:
-            if "t5" in model_args.model_name_or_path:
+            if model_args.do_generation:
                 result["label"] = tokenizer(
                     examples["label"],
                     padding=True,
@@ -704,11 +643,11 @@ def main():
             save_logits=data_args.save_logits,
             loss_fct=nn.CrossEntropyLoss(weight=train_class_weights),
         )
-    elif "t5" in model_args.model_name_or_path:
+    elif model_args.do_generation:
         training_args.generation_max_length = config.max_length
         training_args.generation_num_beams = config.num_beams
         training_args.predict_with_generate = True
-        trainer = CustomSeq2SeqTrainer(
+        trainer = Seq2SeqTrainer(
             model=model,
             args=training_args,
             train_dataset=train_data if training_args.do_train else None,
@@ -717,12 +656,22 @@ def main():
             data_collator=data_collator,
             callbacks=callbacks,
             compute_metrics=compute_metrics_generative,
-            save_reps_path=DKNN_args.save_database_path,
-            layers_to_save=encoding_args.layers_to_save,
-            poolers_to_use=poolers
-            if DKNN_args.save_database_path is not None
-            else None,
         )
+        # trainer = CustomSeq2SeqTrainer(
+        #     model=model,
+        #     args=training_args,
+        #     train_dataset=train_data if training_args.do_train else None,
+        #     eval_dataset=eval_data if training_args.do_eval else None,
+        #     tokenizer=tokenizer,
+        #     data_collator=data_collator,
+        #     callbacks=callbacks,
+        #     compute_metrics=compute_metrics_generative,
+        #     save_reps_path=DKNN_args.save_database_path,
+        #     layers_to_save=encoding_args.layers_to_save,
+        #     poolers_to_use=poolers
+        #     if DKNN_args.save_database_path is not None
+        #     else None,
+        # )
     else:
         trainer = Trainer(
             model=model,
@@ -918,14 +867,13 @@ def main():
     # Test set Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
-        if (
-            "t5" in model_args.model_name_or_path
-            or "xlnet" in model_args.model_name_or_path
-        ):
-            if data_args.compute_predict_results:
-                test_labels = test_data["label"]
-            test_data = test_data.remove_columns("label")
+        # Removing the `label` columns because it contains -1 and Trainer
+        # won't like that.
+        if data_args.compute_predict_results:
+            test_labels = test_data["label"]
+        test_data = test_data.remove_columns("label")
 
+        if model_args.do_generation:
             predict_results = trainer.predict(
                 test_data,
                 metric_key_prefix="predict",
@@ -981,11 +929,6 @@ def main():
                         trainer.log_metrics("predict", predict_metrics)
                         trainer.save_metrics("predict", predict_metrics)
         else:
-            # Removing the `label` columns because it contains -1 and Trainer
-            # won't like that.
-            if data_args.compute_predict_results:
-                test_labels = test_data["label"]
-            test_data = test_data.remove_columns("label")
             prediction_output = trainer.predict(
                 test_data, metric_key_prefix="predict"
             )
