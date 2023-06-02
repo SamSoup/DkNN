@@ -37,7 +37,6 @@ from args import (
     ComputeEncodingsArguments,
     DKNNArguments,
     DataArguments,
-    LLaMaAdapterArgs,
     ModelArguments,
 )
 from transformers.trainer_utils import (
