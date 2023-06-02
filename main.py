@@ -67,6 +67,7 @@ from CustomSeqToSeqTrainer import CustomSeq2SeqTrainer
 from EmbeddingPooler import EmbeddingPooler
 from sklearn.metrics import DistanceMetric
 from sklearn.metrics.pairwise import cosine_distances
+import copy
 import evaluate
 import numpy as np
 import torch.nn as nn
@@ -335,7 +336,11 @@ def main():
 
     # read in data
     train_data, eval_data, test_data = (
-        load_datasets(data_args.dataset_name, data_args.int_to_text)
+        load_datasets(
+            name=data_args.dataset_name,
+            input_key=sentence1_key,
+            intToText=data_args.int_to_text,
+        )
         if model_args.do_generation
         else load_datasets(data_args.dataset_name)
     )
@@ -420,7 +425,7 @@ def main():
         )
     max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
 
-    def preprocess_function(examples):
+    def preprocess_fct_cls(examples):
         # Tokenize the texts - input only
         args = (
             (examples[sentence1_key],)
@@ -430,22 +435,38 @@ def main():
         result = tokenizer(
             *args, padding=padding, max_length=max_seq_length, truncation=True
         )
-
-        # Map labels to IDs, if generative
-        if "label" in examples:
-            if model_args.do_generation:
-                result["label"] = tokenizer(
-                    examples["label"],
-                    padding=True,
-                    max_length=max_seq_length,
-                    truncation=True,
-                ).input_ids
-            elif label_to_id is not None:
-                result["label"] = [
-                    (label_to_id[l] if l != -1 else -1)
-                    for l in examples["label"]
-                ]
+        if "label" in examples and label_to_id is not None:
+            result["label"] = [
+                (label_to_id[l] if l != -1 else -1) for l in examples["label"]
+            ]
         return result
+
+    def preprocess_fct_gen(examples):
+        prompt_only = tokenizer(
+            examples["prompt_only"],
+            padding=padding,
+            max_length=max_seq_length,
+            truncation=True,
+        )
+        full_example = tokenizer(
+            examples["prompt_with_label"],
+            padding=padding,
+            max_length=max_seq_length,
+            truncation=True,
+        )
+        print(prompt_only)
+        print(full_example)
+        print(prompt_only.input_ids.shape)
+        print(full_example.input_ids.shape)
+        labels = copy.deepcopy(full_example.input_ids)
+        labels[: len(prompt_only.input_ids)] = -1
+        example_mask = full_example.input_ids.ge(0)
+        label_mask = labels.ge(0)
+        full_example.input_ids[~example_mask] = 0
+        labels[~label_mask] = 0
+        full_example["label"] = labels
+        input()
+        return full_example
 
     with training_args.main_process_first(desc="dataset map pre-processing"):
         data_dict = {
@@ -468,7 +489,9 @@ def main():
         for split in data_dict:
             # preprocess each dataset
             data_dict[split][2] = data_dict[split][2].map(
-                preprocess_function,
+                preprocess_fct_gen
+                if model_args.do_generation
+                else preprocess_fct_cls,
                 batched=True,
                 load_from_cache_file=not data_args.overwrite_cache,
                 desc=f"Running tokenizer on {split} dataset",

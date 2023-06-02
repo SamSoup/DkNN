@@ -8,13 +8,36 @@ import os, json
 import numpy as np
 import pickle
 
+PROMPT_DICT = {
+    "prompt_cls": (
+        "Generate a classification label indicating if the following text is"
+        " {categories}.\n\nText:\n{text}\n\nLabel:"
+    ),
+    "prompt_nli": (
+        "Given the premise and hypothesis, classify the relationship as one of"
+        " entailment, neutral, or contradiction.\n\nPremise:\n{premise}\n\n"
+        " Hypothesis:\n{hypothesis}\n\nRelation:"
+    ),
+}
 
-def load_datasets(name: str, intToText: List[str] = None) -> Tuple[Dataset]:
+
+def combine_cls_categories(categories: List[str]):
+    stub = ""
+    for i in range(len(categories) - 1):
+        stub += f"{categories[i]}, "
+    stub = stub[:-2] + f" or {categories[-1]}"
+    return stub
+
+
+def load_datasets(
+    name: str, input_key: str, intToText: List[str] = None
+) -> Tuple[Dataset]:
     dataset = load_dataset(
         name, cache_dir=os.environ["TRANSFORMERS_CACHE"], use_auth_token=True
     )
 
     # for generation models, convert ids to actually text labels
+    # and in addition, create a column combining prompts and input texts
     if intToText is not None:
 
         def map_ids_to_text(example):
@@ -23,6 +46,29 @@ def load_datasets(name: str, intToText: List[str] = None) -> Tuple[Dataset]:
 
         for split in dataset:
             dataset[split] = dataset[split].map(map_ids_to_text)
+
+            examples, prompts = [], []
+            for index in range(len(dataset)):
+                if "nli" in name:
+                    premise = dataset["premise"][index]
+                    hypothesis = dataset["hypothesis"][index]
+                    label = dataset["label"][index]
+                    prompt = PROMPT_DICT["prompt_nli"].format(
+                        premise=premise, hypothesis=hypothesis
+                    )
+                else:
+                    text = dataset[input_key][index]
+                    label = dataset["label"][index]
+                    prompt = PROMPT_DICT["prompt_cls"].format(
+                        categories=intToText, text=text
+                    )
+                example = prompt + label
+                prompts.append(prompt)
+                examples.append(example)
+            dataset[split] = dataset[split].add_column(
+                "prompt_with_label", examples
+            )
+            dataset[split] = dataset[split].add_column("prompt_only", prompts)
     return dataset["train"], dataset["eval"], dataset["test"]
 
 
