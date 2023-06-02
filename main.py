@@ -23,6 +23,7 @@ from transformers import (
     EvalPrediction,
     EarlyStoppingCallback,
     HfArgumentParser,
+    LlamaForCausalLM,
     PretrainedConfig,
     Seq2SeqTrainer,
     Trainer,
@@ -204,11 +205,13 @@ def load_model(
     do_peft: bool,
 ):
     # select the appropriate LM
-    LM = (
-        AutoModelForSeq2SeqLM
-        if do_generation
-        else AutoModelForSequenceClassification
-    )
+    if do_generation:
+        if "llama" in model_name_or_path:
+            LM = LlamaForCausalLM
+        else:
+            LM = AutoModelForSeq2SeqLM
+    else:
+        LM = AutoModelForSequenceClassification
     model = LM.from_pretrained(
         model_name_or_path,
         from_tf=bool(".ckpt" in model_name_or_path),
