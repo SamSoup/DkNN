@@ -50,15 +50,15 @@ def load_datasets(
             examples, prompts = [], []
             for index in range(len(dataset)):
                 if "nli" in name:
-                    premise = dataset["premise"][index]
-                    hypothesis = dataset["hypothesis"][index]
-                    label = dataset["label"][index]
+                    premise = dataset[split]["premise"][index]
+                    hypothesis = dataset[split]["hypothesis"][index]
+                    label = dataset[split]["label"][index]
                     prompt = PROMPT_DICT["prompt_nli"].format(
                         premise=premise, hypothesis=hypothesis
                     )
                 else:
-                    text = dataset[input_key][index]
-                    label = dataset["label"][index]
+                    text = dataset[split][input_key][index]
+                    label = dataset[split]["label"][index]
                     prompt = PROMPT_DICT["prompt_cls"].format(
                         categories=intToText, text=text
                     )
