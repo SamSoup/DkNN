@@ -461,6 +461,8 @@ def main():
         )
         labels = []
         for p, ex in zip(prompt_only.input_ids, full_example.input_ids):
+            print(p, ex)
+            input()
             label = copy.deepcopy(ex)  # list
             label[: len(p)] = [tokenizer.pad_token_type_id] * len(
                 p
