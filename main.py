@@ -394,10 +394,8 @@ def main():
         # token embedding, in the tokenization step of input text here,
         # we should use the last token as below.
         # Similarly, for llama this is also required
-        # tokenizer.pad_token = tokenizer.eos_token
-        tokenizer.pad_token_id = -100
-        config.pad_token_id = -100
-        # config.pad_token_id = config.eos_token_id
+        tokenizer.pad_token = tokenizer.eos_token
+        config.pad_token_id = config.eos_token_id
         tokenizer.padding_side = "left"  # decoder only
 
     model = load_model(
@@ -600,7 +598,7 @@ def main():
         decoded_labels = tokenizer.batch_decode(
             labels, skip_special_tokens=True
         )
-        # Some simple post-processing
+        # Some simple post-procecompute_metrics_generativessing
         decoded_preds, decoded_labels = postprocess_text(
             decoded_preds, decoded_labels
         )
