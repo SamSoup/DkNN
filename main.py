@@ -396,7 +396,7 @@ def main():
         # Similarly, for llama this is also required
         tokenizer.pad_token = tokenizer.eos_token
         config.pad_token_id = config.eos_token_id
-        tokenizer.padding_side = "left"  # decoder only
+        # tokenizer.padding_side = "left"  # decoder only
 
     model = load_model(
         model_name_or_path=model_args.model_name_or_path,
@@ -461,8 +461,6 @@ def main():
         )
         labels = []
         for p, ex in zip(prompt_only.input_ids, full_example.input_ids):
-            print(p, ex)
-            input()
             label = copy.deepcopy(ex)  # list
             label[: len(p)] = [tokenizer.pad_token_type_id] * len(
                 p
@@ -471,6 +469,8 @@ def main():
             # label_mask = label.ge(tokenizer.pad_token_id)
             # ex[~example_mask] = tokenizer.pad_token_id
             # labels[~label_mask] = tokenizer.pad_token_id
+            print(p, ex, label)
+            input()
             labels.append(label)
         full_example["label_ids"] = labels
         print(full_example)
