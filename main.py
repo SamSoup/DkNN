@@ -459,8 +459,16 @@ def main():
             max_length=max_seq_length,
             truncation=True,
         )
-        labels = []
-        for p, ex in zip(prompt_only.input_ids, full_example.input_ids):
+        labels = tokenizer(
+            examples["label"],
+            padding=padding,
+            max_length=max_seq_length,
+            truncation=True,
+        )
+        ls = []
+        for p, ex, l in zip(
+            prompt_only.input_ids, full_example.input_ids, labels.input_ids
+        ):
             label = copy.deepcopy(ex)  # list
             label[: len(p)] = [tokenizer.pad_token_type_id] * len(
                 p
@@ -469,10 +477,10 @@ def main():
             # label_mask = label.ge(tokenizer.pad_token_id)
             # ex[~example_mask] = tokenizer.pad_token_id
             # labels[~label_mask] = tokenizer.pad_token_id
-            print(p, ex, label)
+            print(p, ex, label, l)
             input()
-            labels.append(label)
-        full_example["label_ids"] = labels
+            ls.append(label)
+        full_example["label_ids"] = ls
         print(full_example)
         input()
         return full_example
