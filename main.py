@@ -602,6 +602,9 @@ def main():
         decoded_preds, decoded_labels = postprocess_text(
             decoded_preds, decoded_labels
         )
+        print(decoded_preds)
+        print(decoded_labels)
+        input()
         # convert text to ids
         decoded_preds_ids = np.array(
             list(map(lambda x: generative_label_to_id[x], decoded_preds))
