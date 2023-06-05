@@ -471,6 +471,8 @@ def main():
             # labels[~label_mask] = tokenizer.pad_token_id
             labels.append(label)
         full_example["label_ids"] = labels
+        print(full_example)
+        input()
         return full_example
 
     with training_args.main_process_first(desc="dataset map pre-processing"):
@@ -594,6 +596,9 @@ def main():
     def compute_metrics_generative(eval_preds):
         # ToDo: figure out how work
         preds, labels = eval_preds.predictions, eval_preds.label_ids
+        print(decoded_preds)
+        print(decoded_labels)
+        input()
         decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
         decoded_labels = tokenizer.batch_decode(
             labels, skip_special_tokens=True
