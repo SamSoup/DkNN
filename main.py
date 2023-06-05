@@ -394,8 +394,10 @@ def main():
         # token embedding, in the tokenization step of input text here,
         # we should use the last token as below.
         # Similarly, for llama this is also required
-        tokenizer.pad_token = tokenizer.eos_token
-        config.pad_token_id = config.eos_token_id
+        # tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.pad_token_id = -100
+        config.pad_token_id = -100
+        # config.pad_token_id = config.eos_token_id
         tokenizer.padding_side = "left"  # decoder only
 
     model = load_model(
@@ -462,7 +464,9 @@ def main():
         labels = []
         for p, ex in zip(prompt_only.input_ids, full_example.input_ids):
             label = copy.deepcopy(ex)  # list
-            label[: len(p)] = [-100] * len(p)  # ignore prompt portion of input
+            label[: len(p)] = [tokenizer.pad_token_type_id] * len(
+                p
+            )  # ignore prompt portion of input
             # example_mask = ex.input_ids.ge(tokenizer.pad_token_id)
             # label_mask = label.ge(tokenizer.pad_token_id)
             # ex[~example_mask] = tokenizer.pad_token_id
@@ -590,6 +594,7 @@ def main():
     }
 
     def compute_metrics_generative(eval_preds):
+        # ToDo: figure out how work
         preds, labels = eval_preds.predictions, eval_preds.label_ids
         decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
         decoded_labels = tokenizer.batch_decode(
