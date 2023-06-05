@@ -61,7 +61,7 @@ def load_datasets(
                     text = dataset[input_key][index]
                     label = dataset["label"][index]
                     prompt = PROMPT_DICT["prompt_cls"].format(
-                        categories=intToText, text=text
+                        categories=combine_cls_categories(intToText), text=text
                     )
                 example = prompt + label
                 prompts.append(prompt)
