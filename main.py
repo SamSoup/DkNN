@@ -450,7 +450,7 @@ def main():
         return result
 
     def preprocess_fct_gen(examples):
-        text = tokenizer(
+        inputs = tokenizer(
             examples["text"],
             padding=padding,
             max_length=max_seq_length,
@@ -462,8 +462,8 @@ def main():
             max_length=max_seq_length,
             truncation=True,
         )
-        text["label_ids"] = labels
-        return text
+        inputs["label_ids"] = labels.input_ids
+        return inputs
         # prompt_only_no_pad = tokenizer(
         #     examples["prompt_only"],
         #     padding=False,
