@@ -294,6 +294,10 @@ class DataArguments:
             )
         },
     )
+    max_new_tokens: Optional[int] = field(
+        default=10,
+        metadata={"help": "Additional tokens after prompt geeneration"},
+    )
     pad_to_max_length: bool = field(
         default=False,
         metadata={

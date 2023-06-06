@@ -1,6 +1,7 @@
 {
 	"model_name_or_path": "Samsoup/llama7B",
     "do_generation": true,
+	"max_new_tokens": 10,
 	"dataset_name": "Samsoup/toxigen",
 	"deepspeed": "./trial_configurations/toxigen/llama/deepspeed.json",
 	"freeze_base_model_params": false,
