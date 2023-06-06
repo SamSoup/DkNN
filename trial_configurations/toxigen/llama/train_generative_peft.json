@@ -13,7 +13,7 @@
 	"output_dir": "/scratch/06782/ysu707/output/toxigen/llama7B-seed-42-generative-peft",
     "evaluation_strategy": "steps",
 	"eval_steps": 2000,
-	"save_steps": 100,
+	"save_steps": 2000,
     "logging_steps": 1,
 	"save_strategy": "steps",
     "max_seq_length": 64,
