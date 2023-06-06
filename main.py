@@ -452,13 +452,13 @@ def main():
     def preprocess_fct_gen(examples):
         text = tokenizer(
             examples["text"],
-            padding=False,
+            padding=padding,
             max_length=max_seq_length,
             truncation=True,
         )
         labels = tokenizer(
             examples["label"],
-            padding=False,
+            padding=padding,
             max_length=max_seq_length,
             truncation=True,
         )
