@@ -250,11 +250,12 @@ def load_model(
     if do_peft:
         peft_config = LoraConfig(
             task_type=tasktype,
-            inference_mode=True,
-            r=16,
-            lora_alpha=16,
+            inference_mode=False,
+            r=8,
+            lora_alpha=32,
             lora_dropout=0.1,
             bias="none",
+            target_modules=["q_proj", "v_proj"],
         )
         model = get_peft_model(model, peft_config)
         model.print_trainable_parameters()
