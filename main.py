@@ -456,18 +456,18 @@ def main():
             max_length=max_seq_length,
             truncation=True,
         )
-        # full_example = tokenizer(
-        #     examples["prompt_with_label"],
-        #     padding=padding,
-        #     max_length=max_seq_length,
-        #     truncation=True,
-        # )
-        labels = tokenizer(
-            examples["label"],
+        full_example = tokenizer(
+            examples["prompt_with_label"],
             padding=padding,
             max_length=max_seq_length,
             truncation=True,
         )
+        # labels = tokenizer(
+        #     examples["label"],
+        #     padding=padding,
+        #     max_length=max_seq_length,
+        #     truncation=True,
+        # )
         # ls = []
         # for p, ex, l in zip(
         #     prompt_only.input_ids, full_example.input_ids, labels.input_ids
@@ -488,7 +488,7 @@ def main():
         # full_example["label_ids"] = ls
         # print(full_example)
         # input()
-        prompt_only["label_ids"] = labels.input_ids
+        prompt_only["label_ids"] = full_example.input_ids
         return prompt_only
 
     with training_args.main_process_first(desc="dataset map pre-processing"):
