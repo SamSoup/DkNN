@@ -210,10 +210,13 @@ def load_model(
     if do_generation:
         if "llama" in model_name_or_path:
             LM = LlamaForCausalLM
+            tasktype = TaskType.CAUSAL_LM
         else:
             LM = AutoModelForSeq2SeqLM
+            tasktype = TaskType.SEQ_2_SEQ_LM
     else:
         LM = AutoModelForSequenceClassification
+        tasktype = TaskType.SEQ_CLS
     model = LM.from_pretrained(
         model_name_or_path,
         from_tf=bool(".ckpt" in model_name_or_path),
@@ -223,8 +226,6 @@ def load_model(
         use_auth_token=True if use_auth_token else None,
         ignore_mismatched_sizes=ignore_mismatched_sizes,
     )
-    for name, param in model.named_parameters():
-        param.requires_grad = True
     # model.resize_token_embeddings(len(tokenizer))
     print(
         "\nModel initiated with"
@@ -248,9 +249,7 @@ def load_model(
         )
     if do_peft:
         peft_config = LoraConfig(
-            task_type=TaskType.SEQ_2_SEQ_LM
-            if do_generation
-            else TaskType.SEQ_CLS,
+            task_type=tasktype,
             inference_mode=True,
             r=16,
             lora_alpha=16,
