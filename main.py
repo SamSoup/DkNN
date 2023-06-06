@@ -450,47 +450,47 @@ def main():
         return result
 
     def preprocess_fct_gen(examples):
-        inputs = tokenizer(
-            examples["text"],
-            padding=padding,
-            max_length=max_seq_length,
-            truncation=True,
-        )
-        labels = tokenizer(
-            examples["label"],
-            padding=padding,
-            max_length=max_seq_length,
-            truncation=True,
-        )
-        inputs["label_ids"] = labels.input_ids
-        return inputs
-        # prompt_only_no_pad = tokenizer(
-        #     examples["prompt_only"],
-        #     padding=False,
-        #     max_length=max_seq_length,
-        #     truncation=True,
-        # )
-        # full_example = tokenizer(
-        #     examples["prompt_with_label"],
+        # inputs = tokenizer(
+        #     examples["text"],
         #     padding=padding,
         #     max_length=max_seq_length,
         #     truncation=True,
         # )
-        # labels = []
-        # for p, ex in zip(prompt_only_no_pad.input_ids, full_example.input_ids):
-        #     label = copy.deepcopy(ex)
-        #     label[: len(p)] = [tokenizer.pad_token_type_id] * len(
-        #         p
-        #     )  # ignore prompt portion of input
-        #     labels.append(label)
-        # prompt_with_pad = tokenizer(
-        #     examples["prompt_only"],
+        # labels = tokenizer(
+        #     examples["label"],
         #     padding=padding,
         #     max_length=max_seq_length,
         #     truncation=True,
         # )
-        # prompt_with_pad["label_ids"] = labels
-        # return prompt_with_pad
+        # inputs["label_ids"] = labels.input_ids
+        # return inputs
+        prompt_only_no_pad = tokenizer(
+            examples["prompt_only"],
+            padding=False,
+            max_length=max_seq_length,
+            truncation=True,
+        )
+        full_example = tokenizer(
+            examples["prompt_with_label"],
+            padding=padding,
+            max_length=max_seq_length,
+            truncation=True,
+        )
+        labels = []
+        for p, ex in zip(prompt_only_no_pad.input_ids, full_example.input_ids):
+            label = copy.deepcopy(ex)
+            label[: len(p)] = [tokenizer.pad_token_type_id] * len(
+                p
+            )  # ignore prompt portion of input
+            labels.append(label)
+        prompt_with_pad = tokenizer(
+            examples["prompt_only"],
+            padding=padding,
+            max_length=max_seq_length,
+            truncation=True,
+        )
+        prompt_with_pad["label_ids"] = labels
+        return prompt_with_pad
 
         # labels = tokenizer(
         #     examples["label"],
@@ -970,7 +970,8 @@ def main():
         logger.info("*** Predict ***")
         # Removing the `label` columns because it contains -1 and Trainer
         # won't like that.
-        test_data = test_data.remove_columns("label")
+        if "label" in test_data:
+            test_data = test_data.remove_columns("label")
 
         if model_args.do_generation:
             predict_results = trainer.predict(
@@ -987,6 +988,8 @@ def main():
                         clean_up_tokenization_spaces=True,
                     )
                     predictions = [pred.strip() for pred in predictions]
+                    print(predictions)
+                    input()
                     prediction_ids = np.array(
                         list(
                             map(
