@@ -223,11 +223,11 @@ def load_model(
         use_auth_token=True if use_auth_token else None,
         ignore_mismatched_sizes=ignore_mismatched_sizes,
     )
-    model.resize_token_embeddings(len(tokenizer))
+    # model.resize_token_embeddings(len(tokenizer))
     print(
-        "Model initiated with"
+        "\nModel initiated with"
         f" {sum(p.numel() for p in model.parameters() if p.requires_grad)} "
-        "trainable parameters after additional freezing"
+        "trainable parameters after additional freezing\n"
     )
     if freeze_base_model_params:
         for name, param in model.named_parameters():
@@ -547,7 +547,7 @@ def main():
     if training_args.do_train:
         for index in random.sample(range(len(train_data)), 3):
             logger.info(
-                f"Sample {index} of the training set: {train_data[index]}."
+                "\nSample {index} of the training set: {train_data[index]}.\n"
             )
 
     # Custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
@@ -613,6 +613,7 @@ def main():
         decoded_labels = tokenizer.batch_decode(
             labels, skip_special_tokens=True
         )
+        print(eval_preds)
         print(decoded_preds)
         print(decoded_labels)
         input()
