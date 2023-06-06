@@ -11,12 +11,12 @@ import pickle
 PROMPT_DICT = {
     "prompt_cls": (
         "Generate a classification label indicating if the following text is"
-        " {categories}.\n\nText:\n{text}\n\nLabel:"
+        " {categories}.\n\nText:\n{text}\n\nLabel:\n"
     ),
     "prompt_nli": (
         "Given the premise and hypothesis, classify the relationship as one of"
         " entailment, neutral, or contradiction.\n\nPremise:\n{premise}\n\n"
-        " Hypothesis:\n{hypothesis}\n\nRelation:"
+        " Hypothesis:\n{hypothesis}\n\nRelation:\n"
     ),
 }
 
