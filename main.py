@@ -450,9 +450,9 @@ def main():
         return result
 
     def preprocess_fct_gen(examples):
-        prompt_only = tokenizer(
+        prompt_only_no_pad = tokenizer(
             examples["prompt_only"],
-            padding=padding,
+            padding=False,
             max_length=max_seq_length,
             truncation=True,
         )
@@ -462,6 +462,21 @@ def main():
             max_length=max_seq_length,
             truncation=True,
         )
+        labels = []
+        for p, ex in zip(prompt_only_no_pad.input_ids, full_example.input_ids):
+            label = copy.deepcopy(ex)
+            label[: len(p)] = [tokenizer.pad_token_type_id] * len(
+                p
+            )  # ignore prompt portion of input
+            labels.append(label)
+        prompt_with_pad = tokenizer(
+            examples["prompt_only"],
+            padding=padding,
+            max_length=max_seq_length,
+            truncation=True,
+        )
+        prompt_with_pad["label_ids"] = labels
+        return prompt_with_pad
         # labels = tokenizer(
         #     examples["label"],
         #     padding=padding,
@@ -488,8 +503,8 @@ def main():
         # full_example["label_ids"] = ls
         # print(full_example)
         # input()
-        prompt_only["label_ids"] = full_example.input_ids
-        return prompt_only
+        # prompt_only["label_ids"] = full_example.input_ids
+        # return prompt_only
 
     with training_args.main_process_first(desc="dataset map pre-processing"):
         data_dict = {
