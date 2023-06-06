@@ -231,6 +231,7 @@ def load_model(
         f" {sum(p.numel() for p in model.parameters() if p.requires_grad)} "
         "trainable parameters after additional freezing\n"
     )
+
     if freeze_base_model_params:
         for name, param in model.named_parameters():
             print(name)
@@ -548,7 +549,7 @@ def main():
     # Log a few random samples from the training set:
     if training_args.do_train:
         for index in random.sample(range(len(train_data)), 3):
-            logger.info(
+            print(
                 "\nSample {index} of the training set: {train_data[index]}.\n"
             )
 
