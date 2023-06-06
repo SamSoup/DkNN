@@ -453,39 +453,40 @@ def main():
             max_length=max_seq_length,
             truncation=True,
         )
-        full_example = tokenizer(
-            examples["prompt_with_label"],
-            padding=padding,
-            max_length=max_seq_length,
-            truncation=True,
-        )
+        # full_example = tokenizer(
+        #     examples["prompt_with_label"],
+        #     padding=padding,
+        #     max_length=max_seq_length,
+        #     truncation=True,
+        # )
         labels = tokenizer(
             examples["label"],
             padding=padding,
             max_length=max_seq_length,
             truncation=True,
         )
-        ls = []
-        for p, ex, l in zip(
-            prompt_only.input_ids, full_example.input_ids, labels.input_ids
-        ):
-            label = copy.deepcopy(ex)  # list
-            label[: len(p)] = [tokenizer.pad_token_type_id] * len(
-                p
-            )  # ignore prompt portion of input
-            # example_mask = ex.input_ids.ge(tokenizer.pad_token_id)
-            # label_mask = label.ge(tokenizer.pad_token_id)
-            # ex[~example_mask] = tokenizer.pad_token_id
-            # labels[~label_mask] = tokenizer.pad_token_id
-            print(p, ex, label, l)
-            print(tokenizer.decode([1, 3856, 647]))
-            print(tokenizer.decode([1, 1785, 647]))
-            input()
-            ls.append(label)
-        full_example["label_ids"] = ls
-        print(full_example)
-        input()
-        return full_example
+        # ls = []
+        # for p, ex, l in zip(
+        #     prompt_only.input_ids, full_example.input_ids, labels.input_ids
+        # ):
+        #     label = copy.deepcopy(ex)  # list
+        #     label[: len(p)] = [tokenizer.pad_token_type_id] * len(
+        #         p
+        #     )  # ignore prompt portion of input
+        #     # example_mask = ex.input_ids.ge(tokenizer.pad_token_id)
+        #     # label_mask = label.ge(tokenizer.pad_token_id)
+        #     # ex[~example_mask] = tokenizer.pad_token_id
+        #     # labels[~label_mask] = tokenizer.pad_token_id
+        #     print(p, ex, label, l)
+        #     print(tokenizer.decode([1, 3856, 647], skip_special_tokens=True))
+        #     print(tokenizer.decode([1, 1785, 647], skip_special_tokens=True))
+        #     input()
+        #     ls.append(label)
+        # full_example["label_ids"] = ls
+        # print(full_example)
+        # input()
+        prompt_only["label_ids"] = labels.input_ids
+        return prompt_only
 
     with training_args.main_process_first(desc="dataset map pre-processing"):
         data_dict = {
