@@ -478,6 +478,8 @@ def main():
             # ex[~example_mask] = tokenizer.pad_token_id
             # labels[~label_mask] = tokenizer.pad_token_id
             print(p, ex, label, l)
+            print(tokenizer.decode([1, 3856, 647]))
+            print(tokenizer.decode([1, 1785, 647]))
             input()
             ls.append(label)
         full_example["label_ids"] = ls
