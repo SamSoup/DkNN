@@ -9,7 +9,7 @@ import numpy as np
 import pickle
 
 PROMPT_DICT = {
-    "prompt_cls": "Classify the given text as {categories}.Text:{text}Label:",
+    "prompt_cls": "Classify the given text as {categories}. Text:{text} Label:",
     "prompt_nli": (
         "Given the premise and hypothesis, classify the relationship as one of"
         " entailment, neutral, or contradiction.\n\nPremise:\n{premise}\n\n"
