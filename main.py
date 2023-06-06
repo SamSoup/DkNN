@@ -616,7 +616,7 @@ def main():
         print(decoded_preds)
         print(decoded_labels)
         input()
-        # Some simple post-procecompute_metrics_generativessing
+        # Some simple post-procecompute_metrics_generative
         decoded_preds, decoded_labels = postprocess_text(
             decoded_preds, decoded_labels
         )

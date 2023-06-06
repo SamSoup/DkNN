@@ -12,7 +12,7 @@
 	"max_test_samples": 10,
 	"output_dir": "/scratch/06782/ysu707/output/toxigen/llama7B-seed-42-dp-steps-generative",
     "evaluation_strategy": "steps",
-	"eval_steps": 1,
+	"eval_steps": 10,
 	"save_steps": 100,
     "logging_steps": 10,
 	"save_strategy": "steps",
