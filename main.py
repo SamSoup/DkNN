@@ -642,7 +642,6 @@ def main():
     def compute_metrics_generative(eval_preds):
         # ToDo: figure out how work
         preds, labels = eval_preds.predictions, eval_preds.label_ids
-        print(eval_preds)
         print(preds)
         print(labels)
         decoded_preds = tokenizer.batch_decode(
@@ -741,14 +740,14 @@ def main():
             data_args.max_seq_length + data_args.max_new_tokens
         )
         training_args.generation_num_beams = config.num_beams
-        training_args.predict_with_generate = False
+        training_args.predict_with_generate = True
         training_args.generation_config = GenerationConfig.from_pretrained(
             model_args.model_name_or_path
         )
         training_args.generation_config.max_new_tokens = (
             data_args.max_new_tokens
         )
-        # training_args.generation_config.max_new_tokens = 20
+        training_args.generation_config.min_new_tokens = 1  # at least one token
         trainer = Seq2SeqTrainer(
             model=model,
             args=training_args,
