@@ -550,7 +550,7 @@ def main():
     if training_args.do_train:
         for index in random.sample(range(len(train_data)), 3):
             print(
-                "\nSample {index} of the training set: {train_data[index]}.\n"
+                f"\nSample {index} of the training set: {train_data[index]}.\n"
             )
 
     # Custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
