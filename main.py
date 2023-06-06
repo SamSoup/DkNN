@@ -642,13 +642,15 @@ def main():
     def compute_metrics_generative(eval_preds):
         # ToDo: figure out how work
         preds, labels = eval_preds.predictions, eval_preds.label_ids
+        print(eval_preds)
+        print(preds)
+        print(labels)
         decoded_preds = tokenizer.batch_decode(
             preds, skip_special_tokens=True, clean_up_tokenization_spaces=False
         )
         decoded_labels = tokenizer.batch_decode(
             labels, skip_special_tokens=True, clean_up_tokenization_spaces=False
         )
-        print(eval_preds)
         print(decoded_preds)
         print(decoded_labels)
         input()
