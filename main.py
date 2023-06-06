@@ -988,8 +988,6 @@ def main():
                         clean_up_tokenization_spaces=True,
                     )
                     predictions = [pred.strip() for pred in predictions]
-                    print(predictions)
-                    input()
                     prediction_ids = np.array(
                         list(
                             map(
