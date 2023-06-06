@@ -450,33 +450,48 @@ def main():
         return result
 
     def preprocess_fct_gen(examples):
-        prompt_only_no_pad = tokenizer(
-            examples["prompt_only"],
+        text = tokenizer(
+            examples["text"],
             padding=False,
             max_length=max_seq_length,
             truncation=True,
         )
-        full_example = tokenizer(
-            examples["prompt_with_label"],
-            padding=padding,
+        labels = tokenizer(
+            examples["label"],
+            padding=False,
             max_length=max_seq_length,
             truncation=True,
         )
-        labels = []
-        for p, ex in zip(prompt_only_no_pad.input_ids, full_example.input_ids):
-            label = copy.deepcopy(ex)
-            label[: len(p)] = [tokenizer.pad_token_type_id] * len(
-                p
-            )  # ignore prompt portion of input
-            labels.append(label)
-        prompt_with_pad = tokenizer(
-            examples["prompt_only"],
-            padding=padding,
-            max_length=max_seq_length,
-            truncation=True,
-        )
-        prompt_with_pad["label_ids"] = labels
-        return prompt_with_pad
+        text["label_ids"] = labels
+        return text
+        # prompt_only_no_pad = tokenizer(
+        #     examples["prompt_only"],
+        #     padding=False,
+        #     max_length=max_seq_length,
+        #     truncation=True,
+        # )
+        # full_example = tokenizer(
+        #     examples["prompt_with_label"],
+        #     padding=padding,
+        #     max_length=max_seq_length,
+        #     truncation=True,
+        # )
+        # labels = []
+        # for p, ex in zip(prompt_only_no_pad.input_ids, full_example.input_ids):
+        #     label = copy.deepcopy(ex)
+        #     label[: len(p)] = [tokenizer.pad_token_type_id] * len(
+        #         p
+        #     )  # ignore prompt portion of input
+        #     labels.append(label)
+        # prompt_with_pad = tokenizer(
+        #     examples["prompt_only"],
+        #     padding=padding,
+        #     max_length=max_seq_length,
+        #     truncation=True,
+        # )
+        # prompt_with_pad["label_ids"] = labels
+        # return prompt_with_pad
+
         # labels = tokenizer(
         #     examples["label"],
         #     padding=padding,
@@ -627,9 +642,11 @@ def main():
     def compute_metrics_generative(eval_preds):
         # ToDo: figure out how work
         preds, labels = eval_preds.predictions, eval_preds.label_ids
-        decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
+        decoded_preds = tokenizer.batch_decode(
+            preds, skip_special_tokens=True, clean_up_tokenization_spaces=False
+        )
         decoded_labels = tokenizer.batch_decode(
-            labels, skip_special_tokens=True
+            labels, skip_special_tokens=True, clean_up_tokenization_spaces=False
         )
         print(eval_preds)
         print(decoded_preds)
