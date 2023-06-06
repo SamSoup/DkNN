@@ -739,7 +739,7 @@ def main():
             data_args.max_seq_length + data_args.max_new_tokens
         )
         training_args.generation_num_beams = config.num_beams
-        training_args.predict_with_generate = True
+        training_args.predict_with_generate = False
         training_args.generation_config = GenerationConfig.from_pretrained(
             model_args.model_name_or_path
         )
