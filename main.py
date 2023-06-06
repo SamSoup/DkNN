@@ -229,7 +229,7 @@ def load_model(
     print(
         "\nModel initiated with"
         f" {sum(p.numel() for p in model.parameters() if p.requires_grad)} "
-        "trainable parameters after additional freezing\n"
+        "trainable parameters\n"
     )
 
     if freeze_base_model_params:
@@ -248,7 +248,9 @@ def load_model(
         )
     if do_peft:
         peft_config = LoraConfig(
-            task_type=TaskType.SEQ_CLS,
+            task_type=TaskType.SEQ_2_SEQ_LM
+            if do_generation
+            else TaskType.SEQ_CLS,
             inference_mode=True,
             r=16,
             lora_alpha=16,
